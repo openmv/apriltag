@@ -24,13 +24,16 @@ The views and conclusions contained in the software and documentation are those
 of the authors and should not be interpreted as representing official policies,
 either expressed or implied, of the Regents of The University of Michigan.
 */
+#include "common/config.h"
+
+#if APRILTAG_ENABLE_PTHREADS
+
 #include <errno.h>
 
 #define _GNU_SOURCE  // Possible fix for 16.04
 #define __USE_GNU
 #include "common/config.h"
 #include "common/pthreads_cross.h"
-#include <assert.h>
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -200,7 +203,6 @@ void workerpool_run(workerpool_t *wp)
         pthread_cond_broadcast(&wp->startcond);
 
         while (wp->end_count < wp->nthreads) {
-//            printf("caught %d\n", wp->end_count);
             pthread_cond_wait(&wp->endcond, &wp->mutex);
         }
 
@@ -225,3 +227,46 @@ int workerpool_get_nprocs()
     return sysconf (_SC_NPROCESSORS_ONLN);
 #endif
 }
+
+#else /* APRILTAG_ENABLE_PTHREADS */
+
+#include "workerpool.h"
+
+struct workerpool {
+    int nthreads;
+};
+
+workerpool_t *workerpool_create(int nthreads) {
+    (void) nthreads;
+    workerpool_t *wp = (workerpool_t *) apriltag_calloc(1, sizeof(workerpool_t));
+    wp->nthreads = 1;
+    return wp;
+}
+
+void workerpool_destroy(workerpool_t *wp) {
+    if (wp == NULL) return;
+    apriltag_free(wp);
+}
+
+int workerpool_get_nthreads(workerpool_t *wp) {
+    return wp->nthreads;
+}
+
+void workerpool_add_task(workerpool_t *wp, void (*f)(void *p), void *p) {
+    (void) wp;
+    f(p);
+}
+
+void workerpool_run_single(workerpool_t *wp) {
+    (void) wp;
+}
+
+void workerpool_run(workerpool_t *wp) {
+    (void) wp;
+}
+
+int workerpool_get_nprocs(void) {
+    return 1;
+}
+
+#endif /* APRILTAG_ENABLE_PTHREADS */
