@@ -72,7 +72,9 @@ static uint64_t codedata[38] = {
 apriltag_family_t *tagCircle21h7_create()
 {
    apriltag_family_t *tf = apriltag_calloc(1, sizeof(apriltag_family_t));
+#if APRILTAG_ENABLE_TAG_NAMES
    tf->name = apriltag_strdup("tagCircle21h7");
+#endif
    tf->h = 7;
    tf->ncodes = 38;
    tf->codes = codedata;
@@ -131,6 +133,8 @@ void tagCircle21h7_destroy(apriltag_family_t *tf)
 {
    apriltag_free(tf->bit_x);
    apriltag_free(tf->bit_y);
+#if APRILTAG_ENABLE_TAG_NAMES
    apriltag_free(tf->name);
+#endif
    apriltag_free(tf);
 }

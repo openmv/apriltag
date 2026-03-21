@@ -64,7 +64,9 @@ static uint64_t codedata[30] = {
 apriltag_family_t *tag16h5_create()
 {
    apriltag_family_t *tf = apriltag_calloc(1, sizeof(apriltag_family_t));
+#if APRILTAG_ENABLE_TAG_NAMES
    tf->name = apriltag_strdup("tag16h5");
+#endif
    tf->h = 5;
    tf->ncodes = 30;
    tf->codes = codedata;
@@ -113,6 +115,8 @@ void tag16h5_destroy(apriltag_family_t *tf)
 {
    apriltag_free(tf->bit_x);
    apriltag_free(tf->bit_y);
+#if APRILTAG_ENABLE_TAG_NAMES
    apriltag_free(tf->name);
+#endif
    apriltag_free(tf);
 }

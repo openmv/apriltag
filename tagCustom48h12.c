@@ -42245,7 +42245,9 @@ static uint64_t codedata[42211] = {
 apriltag_family_t *tagCustom48h12_create()
 {
    apriltag_family_t *tf = apriltag_calloc(1, sizeof(apriltag_family_t));
+#if APRILTAG_ENABLE_TAG_NAMES
    tf->name = apriltag_strdup("tagCustom48h12");
+#endif
    tf->h = 12;
    tf->ncodes = 42211;
    tf->codes = codedata;
@@ -42358,6 +42360,8 @@ void tagCustom48h12_destroy(apriltag_family_t *tf)
 {
    apriltag_free(tf->bit_x);
    apriltag_free(tf->bit_y);
+#if APRILTAG_ENABLE_TAG_NAMES
    apriltag_free(tf->name);
+#endif
    apriltag_free(tf);
 }

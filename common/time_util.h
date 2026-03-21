@@ -29,6 +29,11 @@ either expressed or implied, of the Regents of The University of Michigan.
 
 #include <stdbool.h>
 #include <stdint.h>
+
+#include "common/config.h"
+
+#if APRILTAG_ENABLE_PROFILE
+
 #include <time.h>
 
 #ifdef _WIN32
@@ -75,3 +80,9 @@ int64_t timeutil_ms_to_us(int32_t ms);
 #ifdef __cplusplus
 }
 #endif
+
+#else
+
+static inline int64_t utime_now(void) { return 0; }
+
+#endif /* APRILTAG_ENABLE_PROFILE */

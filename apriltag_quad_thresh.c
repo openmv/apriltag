@@ -25,6 +25,8 @@ of the authors and should not be interpreted as representing official policies,
 either expressed or implied, of the Regents of The University of Michigan.
 */
 
+#include "common/config.h"
+
 // limitation: image size must be <32768 in width and height. This is
 // because we use a fixed-point 16 bit integer representation with one
 // fractional bit.
@@ -1093,9 +1095,13 @@ static void do_quad_task(void *p)
         memset(&quad, 0, sizeof(struct quad));
 
         if (fit_quad(td, task->im, *cluster, &quad, task->tag_width, task->normal_border, task->reversed_border)) {
+#if APRILTAG_ENABLE_PTHREADS
             pthread_mutex_lock(&td->mutex);
+#endif
             zarray_add(quads, &quad);
+#if APRILTAG_ENABLE_PTHREADS
             pthread_mutex_unlock(&td->mutex);
+#endif
         }
     }
 }
@@ -1387,7 +1393,9 @@ image_u8_t *threshold(apriltag_detector_t *td, image_u8_t *im)
         image_u8_destroy(tmp);
     }
 
+#if APRILTAG_ENABLE_PROFILE
     timeprofile_stamp(td->tp, "threshold");
+#endif
 
     return threshim;
 }
@@ -1506,7 +1514,9 @@ image_u8_t *threshold_bayer(apriltag_detector_t *td, image_u8_t *im)
         apriltag_free(im_max[i]);
     }
 
+#if APRILTAG_ENABLE_PROFILE
     timeprofile_stamp(td->tp, "threshold");
+#endif
 
     return threshim;
 }
@@ -1871,14 +1881,17 @@ zarray_t *apriltag_quad_thresh(apriltag_detector_t *td, image_u8_t *im)
     image_u8_t *threshim = threshold(td, im);
     int ts = threshim->stride;
 
+#if APRILTAG_ENABLE_DEBUG
     if (td->debug)
         image_u8_write_pnm(threshim, "debug_threshold.pnm");
+#endif
 
 
     ////////////////////////////////////////////////////////
     // step 2. find connected components.
     unionfind_t* uf = connected_components(td, threshim, w, h, ts);
 
+#if APRILTAG_ENABLE_DEBUG
     // make segmentation image.
     if (td->debug) {
         image_u8x3_t *d = image_u8x3_create(w, h);
@@ -1916,12 +1929,16 @@ zarray_t *apriltag_quad_thresh(apriltag_detector_t *td, image_u8_t *im)
         image_u8x3_write_pnm(d, "debug_segmentation.pnm");
         image_u8x3_destroy(d);
     }
+#endif
 
 
+#if APRILTAG_ENABLE_PROFILE
     timeprofile_stamp(td->tp, "unionfind");
+#endif
 
     zarray_t* clusters = gradient_clusters(td, threshim, w, h, ts, uf);
 
+#if APRILTAG_ENABLE_DEBUG
     if (td->debug) {
         image_u8x3_t *d = image_u8x3_create(w, h);
 
@@ -1953,16 +1970,20 @@ zarray_t *apriltag_quad_thresh(apriltag_detector_t *td, image_u8_t *im)
         image_u8x3_write_pnm(d, "debug_clusters.pnm");
         image_u8x3_destroy(d);
     }
+#endif
 
 
     image_u8_destroy(threshim);
+#if APRILTAG_ENABLE_PROFILE
     timeprofile_stamp(td->tp, "make clusters");
+#endif
 
     ////////////////////////////////////////////////////////
     // step 3. process each connected component.
 
     zarray_t* quads = fit_quads(td, w, h, clusters, im);
 
+#if APRILTAG_ENABLE_DEBUG
     if (td->debug) {
         FILE *f = fopen("debug_lines.ps", "w");
         fprintf(f, "%%!PS\n\n");
@@ -2002,8 +2023,11 @@ zarray_t *apriltag_quad_thresh(apriltag_detector_t *td, image_u8_t *im)
 
         fclose(f);
     }
+#endif
 
+#if APRILTAG_ENABLE_PROFILE
     timeprofile_stamp(td->tp, "fit quads to clusters");
+#endif
 
     unionfind_destroy(uf);
 

@@ -30,6 +30,7 @@ of the authors and should not be interpreted as representing official policies,
 either expressed or implied, of the Regents of The University of Michigan.
 */
 
+#include "common/config.h"
 #include "apriltag.h"
 
 #define _USE_MATH_DEFINES
@@ -53,7 +54,6 @@ either expressed or implied, of the Regents of The University of Michigan.
 #include "common/debug_print.h"
 
 #include "apriltag_math.h"
-
 #include "common/postscript_utils.h"
 
 #ifdef _WIN32
@@ -388,9 +388,13 @@ apriltag_detector_t *apriltag_detector_create()
 
     td->tag_families = zarray_create(sizeof(apriltag_family_t*));
 
+#if APRILTAG_ENABLE_PTHREADS
     pthread_mutex_init(&td->mutex, NULL);
+#endif
 
+#if APRILTAG_ENABLE_PROFILE
     td->tp = timeprofile_create();
+#endif
 
     td->refine_edges = true;
     td->decode_sharpening = 0.25;
@@ -406,7 +410,9 @@ apriltag_detector_t *apriltag_detector_create()
 
 void apriltag_detector_destroy(apriltag_detector_t *td)
 {
+#if APRILTAG_ENABLE_PROFILE
     timeprofile_destroy(td->tp);
+#endif
     workerpool_destroy(td->wp);
 
     apriltag_detector_clear_families(td);
@@ -504,7 +510,7 @@ static matd_t* homography_compute2(double c[4][4]) {
 }
 
 // returns non-zero if an error occurs (i.e., H has no inverse)
-static int quad_update_homographies(struct quad *quad)
+int quad_update_homographies(struct quad *quad)
 {
     //zarray_t *correspondences = zarray_create(sizeof(float[4]));
 
@@ -759,7 +765,7 @@ static float quad_decode(apriltag_detector_t* td, apriltag_family_t *family, ima
     return fmin(white_score / white_score_count, black_score / black_score_count);
 }
 
-static void refine_edges(apriltag_detector_t *td, image_u8_t *im_orig, struct quad *quad)
+void refine_edges(apriltag_detector_t *td, image_u8_t *im_orig, struct quad *quad)
 {
     double lines[4][4]; // for each line, [Ex Ey nx ny]
 
@@ -1012,9 +1018,13 @@ static void quad_decode_task(void *_u)
                     det->p[i][1] = p[1];
                 }
 
+#if APRILTAG_ENABLE_PTHREADS
                 pthread_mutex_lock(&td->mutex);
+#endif
                 zarray_add(task->detections, &det);
+#if APRILTAG_ENABLE_PTHREADS
                 pthread_mutex_unlock(&td->mutex);
+#endif
             }
 
             quad_destroy(quad);
@@ -1068,8 +1078,10 @@ zarray_t *apriltag_detector_detect(apriltag_detector_t *td, image_u8_t *im_orig)
         }
     }
 
+#if APRILTAG_ENABLE_PROFILE
     timeprofile_clear(td->tp);
     timeprofile_stamp(td->tp, "init");
+#endif
 
     ///////////////////////////////////////////////////////////
     // Step 1. Detect quads according to requested image decimation
@@ -1078,7 +1090,9 @@ zarray_t *apriltag_detector_detect(apriltag_detector_t *td, image_u8_t *im_orig)
     if (td->quad_decimate > 1) {
         quad_im = image_u8_decimate(im_orig, td->quad_decimate);
 
+#if APRILTAG_ENABLE_PROFILE
         timeprofile_stamp(td->tp, "decimate");
+#endif
     }
 
     if (td->quad_sigma != 0) {
@@ -1126,10 +1140,14 @@ zarray_t *apriltag_detector_detect(apriltag_detector_t *td, image_u8_t *im_orig)
         }
     }
 
+#if APRILTAG_ENABLE_PROFILE
     timeprofile_stamp(td->tp, "blur/sharp");
+#endif
 
+#if APRILTAG_ENABLE_DEBUG
     if (td->debug)
         image_u8_write_pnm(quad_im, "debug_preprocess.pnm");
+#endif
 
     zarray_t *quads = apriltag_quad_thresh(td, quad_im);
 
@@ -1154,8 +1172,11 @@ zarray_t *apriltag_detector_detect(apriltag_detector_t *td, image_u8_t *im_orig)
 
     td->nquads = zarray_size(quads);
 
+#if APRILTAG_ENABLE_PROFILE
     timeprofile_stamp(td->tp, "quads");
+#endif
 
+#if APRILTAG_ENABLE_DEBUG
     if (td->debug) {
         image_u8_t *im_quads = image_u8_copy(im_orig);
         image_u8_darken(im_quads);
@@ -1179,6 +1200,7 @@ zarray_t *apriltag_detector_detect(apriltag_detector_t *td, image_u8_t *im_orig)
         image_u8_write_pnm(im_quads, "debug_quads_raw.pnm");
         image_u8_destroy(im_quads);
     }
+#endif
 
     ////////////////////////////////////////////////////////////////
     // Step 2. Decode tags from each quad.
@@ -1209,11 +1231,14 @@ zarray_t *apriltag_detector_detect(apriltag_detector_t *td, image_u8_t *im_orig)
         apriltag_free(tasks);
 
         if (im_samples != NULL) {
+#if APRILTAG_ENABLE_DEBUG
             image_u8_write_pnm(im_samples, "debug_samples.pnm");
+#endif
             image_u8_destroy(im_samples);
         }
     }
 
+#if APRILTAG_ENABLE_DEBUG
     if (td->debug) {
         image_u8_t *im_quads = image_u8_copy(im_orig);
         image_u8_darken(im_quads);
@@ -1238,8 +1263,11 @@ zarray_t *apriltag_detector_detect(apriltag_detector_t *td, image_u8_t *im_orig)
         image_u8_write_pnm(im_quads, "debug_quads_fixed.pnm");
         image_u8_destroy(im_quads);
     }
+#endif
 
+#if APRILTAG_ENABLE_PROFILE
     timeprofile_stamp(td->tp, "decode+refinement");
+#endif
 
     ////////////////////////////////////////////////////////////////
     // Step 3. Reconcile detections--- don't report the same tag more
@@ -1312,8 +1340,11 @@ zarray_t *apriltag_detector_detect(apriltag_detector_t *td, image_u8_t *im_orig)
         zarray_destroy(poly1);
     }
 
+#if APRILTAG_ENABLE_PROFILE
     timeprofile_stamp(td->tp, "reconcile");
+#endif
 
+#if APRILTAG_ENABLE_DEBUG
     ////////////////////////////////////////////////////////////////
     // Produce final debug output
     if (td->debug) {
@@ -1438,8 +1469,11 @@ zarray_t *apriltag_detector_detect(apriltag_detector_t *td, image_u8_t *im_orig)
         fprintf(f, "showpage\n");
         fclose(f);
     }
+#endif
 
+#if APRILTAG_ENABLE_PROFILE
     timeprofile_stamp(td->tp, "debug output");
+#endif
 
     for (int i = 0; i < zarray_size(quads); i++) {
         struct quad *quad;
@@ -1451,7 +1485,9 @@ zarray_t *apriltag_detector_detect(apriltag_detector_t *td, image_u8_t *im_orig)
     zarray_destroy(quads);
 
     zarray_sort(detections, detection_compare_function);
+#if APRILTAG_ENABLE_PROFILE
     timeprofile_stamp(td->tp, "cleanup");
+#endif
 
     return detections;
 }
@@ -1546,7 +1582,9 @@ apriltag_detector_t *apriltag_detector_copy(apriltag_detector_t *src)
 
     // Reinitialize pointer fields to independent default values to avoid shared ownership and double-free issues
     dst->tag_families = zarray_create(sizeof(apriltag_family_t *));
+#if APRILTAG_ENABLE_PROFILE
     dst->tp = timeprofile_create();
+#endif
     dst->wp = workerpool_create(src->nthreads);
 
     return dst;

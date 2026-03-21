@@ -197,7 +197,7 @@ image_u8_t *image_u8_create_from_f32(image_f32_t *fim)
     return im;
 }
 
-
+#if APRILTAG_ENABLE_IMAGE_IO
 int image_u8_write_pnm(const image_u8_t *im, const char *path)
 {
     FILE *f = fopen(path, "wb");
@@ -224,6 +224,7 @@ int image_u8_write_pnm(const image_u8_t *im, const char *path)
 
     return res;
 }
+#endif // APRILTAG_ENABLE_IMAGE_IO
 
 void image_u8_draw_circle(image_u8_t *im, float x0, float y0, float r, int v)
 {

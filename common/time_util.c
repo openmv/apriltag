@@ -25,9 +25,12 @@ of the authors and should not be interpreted as representing official policies,
 either expressed or implied, of the Regents of The University of Michigan.
 */
 
+#include "common/config.h"
+
+#if APRILTAG_ENABLE_PROFILE
+
 #include <stdlib.h>
 #include <math.h>
-#include "common/config.h"
 #include "time_util.h"
 
 #ifdef _MSC_VER
@@ -194,3 +197,5 @@ int64_t timeutil_ms_to_us(int32_t ms)
 {
     return ((int64_t) ms) * 1000;
 }
+
+#endif /* APRILTAG_ENABLE_PROFILE */

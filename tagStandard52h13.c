@@ -48748,7 +48748,9 @@ static uint64_t codedata[48714] = {
 apriltag_family_t *tagStandard52h13_create()
 {
    apriltag_family_t *tf = apriltag_calloc(1, sizeof(apriltag_family_t));
+#if APRILTAG_ENABLE_TAG_NAMES
    tf->name = apriltag_strdup("tagStandard52h13");
+#endif
    tf->h = 13;
    tf->ncodes = 48714;
    tf->codes = codedata;
@@ -48869,6 +48871,8 @@ void tagStandard52h13_destroy(apriltag_family_t *tf)
 {
    apriltag_free(tf->bit_x);
    apriltag_free(tf->bit_y);
+#if APRILTAG_ENABLE_TAG_NAMES
    apriltag_free(tf->name);
+#endif
    apriltag_free(tf);
 }
