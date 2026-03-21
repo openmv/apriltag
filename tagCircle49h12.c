@@ -27,6 +27,7 @@ either expressed or implied, of the Regents of The University of Michigan.
 
 #include <stdlib.h>
 #include "tagCircle49h12.h"
+#include "platform.h"
 
 static uint64_t codedata[65535] = {
    0x0000c6c921d8614aUL,
@@ -65567,14 +65568,16 @@ static uint64_t codedata[65535] = {
 };
 apriltag_family_t *tagCircle49h12_create()
 {
-   apriltag_family_t *tf = calloc(1, sizeof(apriltag_family_t));
-   tf->name = strdup("tagCircle49h12");
+   apriltag_family_t *tf = apriltag_calloc(1, sizeof(apriltag_family_t));
+#ifndef APRILTAG_NO_TAG_NAMES
+   tf->name = apriltag_strdup("tagCircle49h12");
+#endif
    tf->h = 12;
    tf->ncodes = 65535;
    tf->codes = codedata;
    tf->nbits = 49;
-   tf->bit_x = calloc(49, sizeof(uint32_t));
-   tf->bit_y = calloc(49, sizeof(uint32_t));
+   tf->bit_x = apriltag_calloc(49, sizeof(uint32_t));
+   tf->bit_y = apriltag_calloc(49, sizeof(uint32_t));
    tf->bit_x[0] = 1;
    tf->bit_y[0] = -3;
    tf->bit_x[1] = 2;
@@ -65681,8 +65684,10 @@ apriltag_family_t *tagCircle49h12_create()
 
 void tagCircle49h12_destroy(apriltag_family_t *tf)
 {
-   free(tf->bit_x);
-   free(tf->bit_y);
-   free(tf->name);
-   free(tf);
+   apriltag_free(tf->bit_x);
+   apriltag_free(tf->bit_y);
+#ifndef APRILTAG_NO_TAG_NAMES
+   apriltag_free(tf->name);
+#endif
+   apriltag_free(tf);
 }

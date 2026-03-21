@@ -27,6 +27,7 @@ either expressed or implied, of the Regents of The University of Michigan.
 
 #include <stdlib.h>
 #include "tag36h11.h"
+#include "platform.h"
 
 static uint64_t codedata[587] = {
    0x0000000d7e00984bUL,
@@ -619,14 +620,16 @@ static uint64_t codedata[587] = {
 };
 apriltag_family_t *tag36h11_create()
 {
-   apriltag_family_t *tf = calloc(1, sizeof(apriltag_family_t));
-   tf->name = strdup("tag36h11");
+   apriltag_family_t *tf = apriltag_calloc(1, sizeof(apriltag_family_t));
+#ifndef APRILTAG_NO_TAG_NAMES
+   tf->name = apriltag_strdup("tag36h11");
+#endif
    tf->h = 11;
    tf->ncodes = 587;
    tf->codes = codedata;
    tf->nbits = 36;
-   tf->bit_x = calloc(36, sizeof(uint32_t));
-   tf->bit_y = calloc(36, sizeof(uint32_t));
+   tf->bit_x = apriltag_calloc(36, sizeof(uint32_t));
+   tf->bit_y = apriltag_calloc(36, sizeof(uint32_t));
    tf->bit_x[0] = 1;
    tf->bit_y[0] = 1;
    tf->bit_x[1] = 2;
@@ -707,8 +710,10 @@ apriltag_family_t *tag36h11_create()
 
 void tag36h11_destroy(apriltag_family_t *tf)
 {
-   free(tf->bit_x);
-   free(tf->bit_y);
-   free(tf->name);
-   free(tf);
+   apriltag_free(tf->bit_x);
+   apriltag_free(tf->bit_y);
+#ifndef APRILTAG_NO_TAG_NAMES
+   apriltag_free(tf->name);
+#endif
+   apriltag_free(tf);
 }
