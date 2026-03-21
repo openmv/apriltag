@@ -35,6 +35,7 @@ extern "C" {
 #include <string.h>
 #include <stdint.h>
 
+#include "platform.h"
 #include "time_util.h"
 #include "zarray.h"
 
@@ -53,7 +54,7 @@ struct timeprofile
 
 static inline timeprofile_t *timeprofile_create()
 {
-    timeprofile_t *tp = (timeprofile_t*) calloc(1, sizeof(timeprofile_t));
+    timeprofile_t *tp = (timeprofile_t*) apriltag_calloc(1, sizeof(timeprofile_t));
     tp->stamps = zarray_create(sizeof(struct timeprofile_entry));
 
     tp->utime = utime_now();
@@ -64,7 +65,7 @@ static inline timeprofile_t *timeprofile_create()
 static inline void timeprofile_destroy(timeprofile_t *tp)
 {
     zarray_destroy(tp->stamps);
-    free(tp);
+    apriltag_free(tp);
 }
 
 static inline void timeprofile_clear(timeprofile_t *tp)

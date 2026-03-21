@@ -25,6 +25,10 @@ of the authors and should not be interpreted as representing official policies,
 either expressed or implied, of the Regents of The University of Michigan.
 */
 
+#include "platform.h"
+
+#ifndef APRILTAG_NO_PROFILE
+
 #include <stdlib.h>
 #include <math.h>
 #include "time_util.h"
@@ -193,3 +197,5 @@ int64_t timeutil_ms_to_us(int32_t ms)
 {
     return ((int64_t) ms) * 1000;
 }
+
+#endif /* APRILTAG_NO_PROFILE */
