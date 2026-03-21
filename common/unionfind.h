@@ -30,6 +30,7 @@ either expressed or implied, of the Regents of The University of Michigan.
 #include <string.h>
 #include <stdint.h>
 #include <stdlib.h>
+#include "common/config.h"
 
 typedef struct unionfind unionfind_t;
 
@@ -46,9 +47,9 @@ struct unionfind
 
 static inline unionfind_t *unionfind_create(uint32_t maxid)
 {
-    unionfind_t *uf = (unionfind_t*) calloc(1, sizeof(unionfind_t));
+    unionfind_t *uf = (unionfind_t*) apriltag_calloc(1, sizeof(unionfind_t));
     uf->maxid = maxid;
-    uf->parent = (uint32_t *) malloc((maxid+1) * sizeof(uint32_t) * 2);
+    uf->parent = (uint32_t *) apriltag_malloc((maxid+1) * sizeof(uint32_t) * 2);
     memset(uf->parent, 0xff, (maxid+1) * sizeof(uint32_t));
     uf->size = uf->parent + (maxid+1);
     memset(uf->size, 0, (maxid+1) * sizeof(uint32_t));
@@ -57,8 +58,8 @@ static inline unionfind_t *unionfind_create(uint32_t maxid)
 
 static inline void unionfind_destroy(unionfind_t *uf)
 {
-    free(uf->parent);
-    free(uf);
+    apriltag_free(uf->parent);
+    apriltag_free(uf);
 }
 
 /*

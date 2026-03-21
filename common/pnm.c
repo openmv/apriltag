@@ -29,6 +29,7 @@ either expressed or implied, of the Regents of The University of Michigan.
 #include <stdio.h>
 #include <stdlib.h>
 
+#include "common/config.h"
 #include "pnm.h"
 
 pnm_t *pnm_create_from_file(const char *path)
@@ -37,7 +38,7 @@ pnm_t *pnm_create_from_file(const char *path)
     if (f == NULL)
         return NULL;
 
-    pnm_t *pnm = calloc(1, sizeof(pnm_t));
+    pnm_t *pnm = apriltag_calloc(1, sizeof(pnm_t));
     pnm->format = -1;
 
     char tmp[1024];
@@ -56,7 +57,7 @@ pnm_t *pnm_create_from_file(const char *path)
 
         if (pnm->format == -1 && tmp[0]=='P') {
             pnm->format = tmp[1]-'0';
-            assert(pnm->format == PNM_FORMAT_GRAY || pnm->format == PNM_FORMAT_RGB || pnm->format == PNM_FORMAT_BINARY);
+            apriltag_assert(pnm->format == PNM_FORMAT_GRAY || pnm->format == PNM_FORMAT_RGB || pnm->format == PNM_FORMAT_BINARY);
             p = &tmp[2];
         }
 
@@ -90,7 +91,7 @@ pnm_t *pnm_create_from_file(const char *path)
             pnm->max = 1;
 
             pnm->buflen = pnm->height * ((pnm->width + 7)  / 8);
-            pnm->buf = malloc(pnm->buflen);
+            pnm->buf = apriltag_malloc(pnm->buflen);
             size_t len = fread(pnm->buf, 1, pnm->buflen, f);
             if (len != pnm->buflen)
                 goto error;
@@ -105,9 +106,9 @@ pnm_t *pnm_create_from_file(const char *path)
             else if (pnm->max == 65535)
                 pnm->buflen = 2 * pnm->width * pnm->height;
             else
-                assert(0);
+                apriltag_assert(0);
 
-            pnm->buf = malloc(pnm->buflen);
+            pnm->buf = apriltag_malloc(pnm->buflen);
             size_t len = fread(pnm->buf, 1, pnm->buflen, f);
             if (len != pnm->buflen)
                 goto error;
@@ -122,9 +123,9 @@ pnm_t *pnm_create_from_file(const char *path)
             else if (pnm->max == 65535)
                 pnm->buflen = 2 * pnm->width * pnm->height * 3;
             else
-                assert(0);
+                apriltag_assert(0);
 
-            pnm->buf = malloc(pnm->buflen);
+            pnm->buf = apriltag_malloc(pnm->buflen);
             size_t len = fread(pnm->buf, 1, pnm->buflen, f);
             if (len != pnm->buflen)
                 goto error;
@@ -137,8 +138,8 @@ error:
     fclose(f);
 
     if (pnm != NULL) {
-        free(pnm->buf);
-        free(pnm);
+        apriltag_free(pnm->buf);
+        apriltag_free(pnm);
     }
 
     return NULL;
@@ -149,6 +150,6 @@ void pnm_destroy(pnm_t *pnm)
     if (pnm == NULL)
         return;
 
-    free(pnm->buf);
-    free(pnm);
+    apriltag_free(pnm->buf);
+    apriltag_free(pnm);
 }

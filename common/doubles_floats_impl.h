@@ -30,6 +30,7 @@ either expressed or implied, of the Regents of The University of Michigan.
 #include <string.h>
 #include <float.h>
 
+#include "common/config.h"
 #include "matd.h"
 #include "math_util.h"
 
@@ -70,7 +71,7 @@ static inline TNAME *TFN(s_dup)(const TNAME *v, int len)
     if (!v)
         return NULL;
 
-    TNAME *r = (TNAME*)malloc(len * sizeof(TNAME));
+    TNAME *r = (TNAME*)apriltag_malloc(len * sizeof(TNAME));
     memcpy(r, v, len * sizeof(TNAME));
     return r;
 }
@@ -633,10 +634,10 @@ static inline void TFN(s_mat_add)(const TNAME *A, int Arows, int Acols,
                                    const TNAME *B, int Brows, int Bcols,
                                    TNAME *R, int Rrows, int Rcols)
 {
-    assert(Arows == Brows);
-    assert(Arows == Rrows);
-    assert(Bcols == Bcols);
-    assert(Bcols == Rcols);
+    apriltag_assert(Arows == Brows);
+    apriltag_assert(Arows == Rrows);
+    apriltag_assert(Bcols == Bcols);
+    apriltag_assert(Bcols == Rcols);
 
     for (int i = 0; i < Arows; i++)
         for (int j = 0; j < Bcols; j++)
@@ -649,9 +650,9 @@ static inline void TFN(s_mat_AB)(const TNAME *A, int Arows, int Acols,
                                   const TNAME *B, int Brows, int Bcols,
                                   TNAME *R, int Rrows, int Rcols)
 {
-    assert(Acols == Brows);
-    assert(Rrows == Arows);
-    assert(Bcols == Rcols);
+    apriltag_assert(Acols == Brows);
+    apriltag_assert(Rrows == Arows);
+    apriltag_assert(Bcols == Rcols);
 
     for (int Rrow = 0; Rrow < Rrows; Rrow++) {
         for (int Rcol = 0; Rcol < Rcols; Rcol++) {
@@ -669,9 +670,9 @@ static inline void TFN(s_mat_ABt)(const TNAME *A, int Arows, int Acols,
                                   const TNAME *B, int Brows, int Bcols,
                                   TNAME *R, int Rrows, int Rcols)
 {
-    assert(Acols == Bcols);
-    assert(Rrows == Arows);
-    assert(Brows == Rcols);
+    apriltag_assert(Acols == Bcols);
+    apriltag_assert(Rrows == Arows);
+    apriltag_assert(Brows == Rcols);
 
     for (int Rrow = 0; Rrow < Rrows; Rrow++) {
         for (int Rcol = 0; Rcol < Rcols; Rcol++) {
@@ -688,19 +689,19 @@ static inline void TFN(s_mat_ABC)(const TNAME *A, int Arows, int Acols,
                                   const TNAME *C, int Crows, int Ccols,
                                   TNAME *R, int Rrows, int Rcols)
 {
-    TNAME *tmp = malloc(sizeof(TNAME)*Arows*Bcols);
+    TNAME *tmp = apriltag_malloc(sizeof(TNAME)*Arows*Bcols);
 
     TFN(s_mat_AB)(A, Arows, Acols, B, Brows, Bcols, tmp, Arows, Bcols);
     TFN(s_mat_AB)(tmp, Arows, Bcols, C, Crows, Ccols, R, Rrows, Rcols);
-    free(tmp);
+    apriltag_free(tmp);
 }
 
 static inline void TFN(s_mat_Ab)(const TNAME *A, int Arows, int Acols,
                                   const TNAME *B, int Blength,
                                   TNAME *R, int Rlength)
 {
-    assert(Acols == Blength);
-    assert(Arows == Rlength);
+    apriltag_assert(Acols == Blength);
+    apriltag_assert(Arows == Rlength);
 
     for (int Ridx = 0; Ridx < Rlength; Ridx++) {
         TNAME acc = 0;
@@ -714,9 +715,9 @@ static inline void TFN(s_mat_AtB)(const TNAME *A, int Arows, int Acols,
                                    const TNAME *B, int Brows, int Bcols,
                                    TNAME *R, int Rrows, int Rcols)
 {
-    assert(Arows == Brows);
-    assert(Rrows == Acols);
-    assert(Bcols == Rcols);
+    apriltag_assert(Arows == Brows);
+    apriltag_assert(Rrows == Acols);
+    apriltag_assert(Bcols == Rcols);
 
     for (int Rrow = 0; Rrow < Rrows; Rrow++) {
         for (int Rcol = 0; Rcol < Rcols; Rcol++) {
@@ -941,8 +942,8 @@ static inline void TFN(s_elu_to_mat44)(const TNAME eye[3], const TNAME lookat[3]
 static inline void TFN(s_mat33_chol)(const TNAME *A, int Arows, int Acols,
                                      TNAME *R, int Brows, int Bcols)
 {
-    assert(Arows == Brows);
-    assert(Bcols == Bcols);
+    apriltag_assert(Arows == Brows);
+    apriltag_assert(Bcols == Bcols);
 
     // A[0] = R[0]*R[0]
     R[0] = (TNAME)sqrt(A[0]);
@@ -994,12 +995,12 @@ static inline void TFN(s_mat33_sym_solve)(const TNAME *A, int Arows, int Acols,
                                           const TNAME *B, int Brows, int Bcols,
                                           TNAME *R, int Rrows, int Rcols)
 {
-    assert(Arows == Acols);
-    assert(Acols == 3);
-    assert(Brows == 3);
-    assert(Bcols == 1);
-    assert(Rrows == 3);
-    assert(Rcols == 1);
+    apriltag_assert(Arows == Acols);
+    apriltag_assert(Acols == 3);
+    apriltag_assert(Brows == 3);
+    apriltag_assert(Bcols == 1);
+    apriltag_assert(Rrows == 3);
+    apriltag_assert(Rcols == 1);
 
     TNAME L[9];
     TFN(s_mat33_chol)(A, 3, 3, L, 3, 3);
@@ -1023,10 +1024,10 @@ static inline void TFN(s_mat_solve_chol)(const TNAME *A, int Arows, int Acols,
                                          const TNAME *B, int Brows, int Bcols,
                                          TNAME *R, int Rrows, int Rcols)
 {
-    assert(Arows == Acols);
-    assert(Arows == Brows);
-    assert(Acols == Rrows);
-    assert(Bcols == Rcols);
+    apriltag_assert(Arows == Acols);
+    apriltag_assert(Arows == Brows);
+    apriltag_assert(Acols == Rrows);
+    apriltag_assert(Bcols == Rcols);
 
     //
 }

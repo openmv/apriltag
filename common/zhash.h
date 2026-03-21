@@ -34,6 +34,7 @@ extern "C" {
 #endif
 
 #include "zarray.h"
+#include "common/config.h"
 
 
 /**
@@ -273,7 +274,7 @@ void zhash_map_values(zhash_t *zh, void (*f)(void *));
  * Calls the supplied function with a copy of every key in the hash table in
  * turn. While zhash_map_keys() passes a pointer to internal storage, this function
  * passes a copy of the actual storage. If the zhash stores pointers to data,
- * functions like free() can be used directly with zhash_vmap_keys().
+ * functions like apriltag_free() can be used directly with zhash_vmap_keys().
  * The function may be NULL, in which case no action is taken.
  *
  * NOTE: zhash_vmap_keys() can only be used with pointer-data keys.
@@ -286,7 +287,7 @@ void zhash_vmap_keys(zhash_t *vh, void (*f)(void *));
  * Calls the supplied function with a copy of every value in the hash table in
  * turn. While zhash_map_values() passes a pointer to internal storage, this function
  * passes a copy of the actual storage. If the zhash stores pointers to data,
- * functions like free() can be used directly with zhash_vmap_values().
+ * functions like apriltag_free() can be used directly with zhash_vmap_values().
  * The function may be NULL, in which case no action is taken.
  *
  * NOTE: zhash_vmap_values() can only be used with pointer-data values.
@@ -388,8 +389,8 @@ static inline char *zhash_str_str_get(zhash_t *zh, const char *key)
     {
         char *oldkey, *oldval;
         if (zhash_put(zh, &key, &value, &oldkey, &oldval)) {
-            free(oldkey);
-            free(oldval);
+            apriltag_free(oldkey);
+            apriltag_free(oldval);
         }
     }
 
@@ -400,8 +401,8 @@ static inline char *zhash_str_str_get(zhash_t *zh, const char *key)
 
         char *key, *value;
         while (zhash_iterator_next(&zit, &key, &value)) {
-            free(key);
-            free(value);
+            apriltag_free(key);
+            apriltag_free(value);
         }
 
         zhash_destroy(zh);
@@ -410,7 +411,7 @@ static inline char *zhash_str_str_get(zhash_t *zh, const char *key)
 
 static inline uint32_t zhash_int_hash(const void *_a)
 {
-    assert(_a != NULL);
+    apriltag_assert(_a != NULL);
 
     uint32_t a = *((int*) _a);
     return a;
@@ -418,8 +419,8 @@ static inline uint32_t zhash_int_hash(const void *_a)
 
 static inline int zhash_int_equals(const void *_a, const void *_b)
 {
-    assert(_a != NULL);
-    assert(_b != NULL);
+    apriltag_assert(_a != NULL);
+    apriltag_assert(_b != NULL);
 
     int a = *((int*) _a);
     int b = *((int*) _b);

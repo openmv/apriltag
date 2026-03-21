@@ -26,6 +26,7 @@ either expressed or implied, of the Regents of The University of Michigan.
 */
 
 #include <stdlib.h>
+#include "common/config.h"
 #include "tagCustom48h12.h"
 
 static uint64_t codedata[42211] = {
@@ -42243,14 +42244,14 @@ static uint64_t codedata[42211] = {
 };
 apriltag_family_t *tagCustom48h12_create()
 {
-   apriltag_family_t *tf = calloc(1, sizeof(apriltag_family_t));
-   tf->name = strdup("tagCustom48h12");
+   apriltag_family_t *tf = apriltag_calloc(1, sizeof(apriltag_family_t));
+   tf->name = apriltag_strdup("tagCustom48h12");
    tf->h = 12;
    tf->ncodes = 42211;
    tf->codes = codedata;
    tf->nbits = 48;
-   tf->bit_x = calloc(48, sizeof(uint32_t));
-   tf->bit_y = calloc(48, sizeof(uint32_t));
+   tf->bit_x = apriltag_calloc(48, sizeof(uint32_t));
+   tf->bit_y = apriltag_calloc(48, sizeof(uint32_t));
    tf->bit_x[0] = -2;
    tf->bit_y[0] = -2;
    tf->bit_x[1] = -1;
@@ -42355,8 +42356,8 @@ apriltag_family_t *tagCustom48h12_create()
 
 void tagCustom48h12_destroy(apriltag_family_t *tf)
 {
-   free(tf->bit_x);
-   free(tf->bit_y);
-   free(tf->name);
-   free(tf);
+   apriltag_free(tf->bit_x);
+   apriltag_free(tf->bit_y);
+   apriltag_free(tf->name);
+   apriltag_free(tf);
 }

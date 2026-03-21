@@ -2,6 +2,8 @@
 #include <errno.h>
 #include <stdlib.h>
 
+#include <common/config.h>
+
 // https://stackoverflow.com/a/47229318/8144672
 /* The original code is public domain -- Will Hartung 4/9/09 */
 /* Modifications, public domain as well, by Antti Haapala, 11/10/17 - Switched to getc on 5/23/19 */
@@ -21,7 +23,7 @@ ssize_t apriltag_test_getline(char **lineptr, size_t *n, FILE *stream) {
     }
 
     if (*lineptr == NULL) {
-        *lineptr = malloc(128);
+        *lineptr = apriltag_malloc(128);
         if (*lineptr == NULL) {
             return -1;
         }
@@ -35,7 +37,7 @@ ssize_t apriltag_test_getline(char **lineptr, size_t *n, FILE *stream) {
             if (new_size < 128) {
                 new_size = 128;
             }
-            char *new_ptr = realloc(*lineptr, new_size);
+            char *new_ptr = apriltag_realloc(*lineptr, new_size);
             if (new_ptr == NULL) {
                 return -1;
             }

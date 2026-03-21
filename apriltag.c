@@ -40,6 +40,7 @@ either expressed or implied, of the Regents of The University of Michigan.
 #include <stdio.h>
 #include <errno.h>
 
+#include "common/config.h"
 #include "common/image_u8.h"
 #include "common/image_u8_parallel.h"
 #include "common/image_u8x3.h"
@@ -149,12 +150,12 @@ static void quad_destroy(struct quad *quad)
 
     matd_destroy(quad->H);
     matd_destroy(quad->Hinv);
-    free(quad);
+    apriltag_free(quad);
 }
 
 static struct quad *quad_copy(struct quad *quad)
 {
-    struct quad *q = calloc(1, sizeof(struct quad));
+    struct quad *q = apriltag_calloc(1, sizeof(struct quad));
     memcpy(q, quad, sizeof(struct quad));
     if (quad->H)
         q->H = matd_copy(quad->H);
@@ -199,17 +200,17 @@ static void quick_decode_uninit(apriltag_family_t *fam)
 
     struct quick_decode *qd = (struct quick_decode*) fam->impl;
     for (int i = 0; i < NUM_CHUNKS; i++) {
-        free(qd->chunk_offsets[i]);
-        free(qd->chunk_ids[i]);
+        apriltag_free(qd->chunk_offsets[i]);
+        apriltag_free(qd->chunk_ids[i]);
     }
-    free(qd);
+    apriltag_free(qd);
     fam->impl = NULL;
 }
 
 static void quick_decode_init(apriltag_family_t *family, int maxhamming)
 {
-    assert(family->impl == NULL);
-    assert(family->ncodes < 65536);
+    apriltag_assert(family->impl == NULL);
+    apriltag_assert(family->ncodes < 65536);
 
     if (maxhamming > 3) {
         debug_print("\"maxhamming\" beyond 3 not supported\n");
@@ -217,7 +218,7 @@ static void quick_decode_init(apriltag_family_t *family, int maxhamming)
         return;
     }
 
-    struct quick_decode *qd = calloc(1, sizeof(struct quick_decode));
+    struct quick_decode *qd = apriltag_calloc(1, sizeof(struct quick_decode));
     if (!qd) {
         debug_print("Memory allocation failed\n");
         return;
@@ -237,12 +238,12 @@ static void quick_decode_init(apriltag_family_t *family, int maxhamming)
     }
 
     for (int i = 0; i < NUM_CHUNKS; i++) {
-        qd->chunk_offsets[i] = calloc(qd->capacity + 1, sizeof(uint16_t));
+        qd->chunk_offsets[i] = apriltag_calloc(qd->capacity + 1, sizeof(uint16_t));
         if (!qd->chunk_offsets[i]) {
             debug_print("Memory allocation failed\n");
             goto fail;
         }
-        qd->chunk_ids[i] = calloc(qd->ncodes, sizeof(uint16_t));
+        qd->chunk_ids[i] = apriltag_calloc(qd->ncodes, sizeof(uint16_t));
         if (!qd->chunk_ids[i]) {
             debug_print("Memory allocation failed\n");
             goto fail;
@@ -269,11 +270,11 @@ static void quick_decode_init(apriltag_family_t *family, int maxhamming)
     uint16_t *cursors[NUM_CHUNKS];
     memset(cursors, 0, sizeof(cursors));
     for (int i = 0; i < NUM_CHUNKS; i++) {
-        cursors[i] = malloc((qd->capacity + 1) * sizeof(uint16_t));
+        cursors[i] = apriltag_malloc((qd->capacity + 1) * sizeof(uint16_t));
         if (cursors[i] == NULL) {
             debug_print("Memory allocation failed\n");
             for (int j = 0; j < NUM_CHUNKS; j++)
-                free(cursors[j]);
+                apriltag_free(cursors[j]);
             goto fail;
         }
         memcpy(cursors[i], qd->chunk_offsets[i], (qd->capacity + 1) * sizeof(uint16_t));
@@ -290,7 +291,7 @@ static void quick_decode_init(apriltag_family_t *family, int maxhamming)
     }
 
     for (int i = 0; i < NUM_CHUNKS; i++) {
-        free(cursors[i]);
+        apriltag_free(cursors[i]);
     }
 
     return;
@@ -371,7 +372,7 @@ void apriltag_detector_clear_families(apriltag_detector_t *td)
 
 apriltag_detector_t *apriltag_detector_create()
 {
-    apriltag_detector_t *td = (apriltag_detector_t*) calloc(1, sizeof(apriltag_detector_t));
+    apriltag_detector_t *td = (apriltag_detector_t*) apriltag_calloc(1, sizeof(apriltag_detector_t));
 
     td->nthreads = 1;
     td->quad_decimate = 2.0;
@@ -411,7 +412,7 @@ void apriltag_detector_destroy(apriltag_detector_t *td)
     apriltag_detector_clear_families(td);
 
     zarray_destroy(td->tag_families);
-    free(td);
+    apriltag_free(td);
 }
 
 struct quad_decode_task
@@ -552,7 +553,7 @@ static double value_for_pixel(image_u8_t *im, double px, double py) {
 }
 
 static void sharpen(apriltag_detector_t* td, double* values, int size) {
-    double *sharpened = malloc(sizeof(double)*size*size);
+    double *sharpened = apriltag_malloc(sizeof(double)*size*size);
     double kernel[9] = {
         0, -1, 0,
         -1, 4, -1,
@@ -580,7 +581,7 @@ static void sharpen(apriltag_detector_t* td, double* values, int size) {
         }
     }
 
-    free(sharpened);
+    apriltag_free(sharpened);
 }
 
 // returns the decision margin. Return < 0 if the detection should be rejected.
@@ -701,7 +702,7 @@ static float quad_decode(apriltag_detector_t* td, apriltag_family_t *family, ima
     float black_score = 0, white_score = 0;
     float black_score_count = 1, white_score_count = 1;
 
-    double *values = calloc(family->total_width*family->total_width, sizeof(double));
+    double *values = apriltag_calloc(family->total_width*family->total_width, sizeof(double));
 
     int min_coord = (family->width_at_border - family->total_width)/2;
     for (uint32_t i = 0; i < family->nbits; i++) {
@@ -754,7 +755,7 @@ static float quad_decode(apriltag_detector_t* td, apriltag_family_t *family, ima
     }
 
     quick_decode_codeword(family, rcode, res);
-    free(values);
+    apriltag_free(values);
     return fmin(white_score / white_score_count, black_score / black_score_count);
 }
 
@@ -971,7 +972,7 @@ static void quad_decode_task(void *_u)
             float decision_margin = quad_decode(td, family, im, quad, &res, task->im_samples);
 
             if (decision_margin >= 0 && res.hamming < 255) {
-                apriltag_detection_t *det = calloc(1, sizeof(apriltag_detection_t));
+                apriltag_detection_t *det = apriltag_calloc(1, sizeof(apriltag_detection_t));
 
                 det->family = family;
                 det->id = res.id;
@@ -1027,7 +1028,7 @@ void apriltag_detection_destroy(apriltag_detection_t *det)
         return;
 
     matd_destroy(det->H);
-    free(det);
+    apriltag_free(det);
 }
 
 static int prefer_smaller(int pref, double q0, double q1)
@@ -1186,7 +1187,7 @@ zarray_t *apriltag_detector_detect(apriltag_detector_t *td, image_u8_t *im_orig)
 
         int chunksize = 1 + zarray_size(quads) / (APRILTAG_TASKS_PER_THREAD_TARGET * td->nthreads);
 
-        struct quad_decode_task *tasks = malloc(sizeof(struct quad_decode_task)*(zarray_size(quads) / chunksize + 1));
+        struct quad_decode_task *tasks = apriltag_malloc(sizeof(struct quad_decode_task)*(zarray_size(quads) / chunksize + 1));
 
         int ntasks = 0;
         for (int i = 0; i < zarray_size(quads); i+= chunksize) {
@@ -1205,7 +1206,7 @@ zarray_t *apriltag_detector_detect(apriltag_detector_t *td, image_u8_t *im_orig)
 
         workerpool_run(td->wp);
 
-        free(tasks);
+        apriltag_free(tasks);
 
         if (im_samples != NULL) {
             image_u8_write_pnm(im_samples, "debug_samples.pnm");
@@ -1471,8 +1472,8 @@ void apriltag_detections_destroy(zarray_t *detections)
 
 image_u8_t *apriltag_to_image(apriltag_family_t *fam, uint32_t idx)
 {
-    assert(fam != NULL);
-    assert(idx < fam->ncodes);
+    apriltag_assert(fam != NULL);
+    apriltag_assert(idx < fam->ncodes);
 
     uint64_t code = fam->codes[idx];
 
@@ -1499,8 +1500,8 @@ image_u8_t *apriltag_to_image(apriltag_family_t *fam, uint32_t idx)
 
 void apriltag_detection_copy(apriltag_detection_t* src, apriltag_detection_t* dst)
 {
-    assert(src != NULL);
-    assert(dst != NULL);
+    apriltag_assert(src != NULL);
+    apriltag_assert(dst != NULL);
 
     if (dst->H) {
         matd_destroy(dst->H);
@@ -1529,7 +1530,7 @@ zarray_t* apriltag_detections_copy(zarray_t* detections)
         apriltag_detection_t* det;
         zarray_get(detections, i, &det);
 
-        apriltag_detection_t* det_copy = (apriltag_detection_t*)calloc(1, sizeof(apriltag_detection_t));
+        apriltag_detection_t* det_copy = (apriltag_detection_t*)apriltag_calloc(1, sizeof(apriltag_detection_t));
         apriltag_detection_copy(det, det_copy);
         zarray_add(detections_copy, &det_copy);
     }
@@ -1539,7 +1540,7 @@ zarray_t* apriltag_detections_copy(zarray_t* detections)
 
 apriltag_detector_t *apriltag_detector_copy(apriltag_detector_t *src)
 {
-    apriltag_detector_t *dst = (apriltag_detector_t *)malloc(sizeof(apriltag_detector_t));
+    apriltag_detector_t *dst = (apriltag_detector_t *)apriltag_malloc(sizeof(apriltag_detector_t));
     // Shallow copy of all scalar fields
     *dst = *src;
 

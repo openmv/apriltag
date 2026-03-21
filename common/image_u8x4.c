@@ -30,6 +30,7 @@ either expressed or implied, of the Regents of The University of Michigan.
 #include <stdlib.h>
 #include <string.h>
 
+#include "common/config.h"
 #include "pam.h"
 #include "pnm.h"
 #include "image_u8x4.h"
@@ -50,25 +51,25 @@ image_u8x4_t *image_u8x4_create_alignment(unsigned int width, unsigned int heigh
     if ((stride % alignment) != 0)
         stride += alignment - (stride % alignment);
 
-    uint8_t *buf = calloc(height*stride, sizeof(uint8_t));
+    uint8_t *buf = apriltag_calloc(height*stride, sizeof(uint8_t));
 
     // const initializer
     image_u8x4_t tmp = { .width = width, .height = height, .stride = stride, .buf = buf };
 
-    image_u8x4_t *im = calloc(1, sizeof(image_u8x4_t));
+    image_u8x4_t *im = apriltag_calloc(1, sizeof(image_u8x4_t));
     memcpy(im, &tmp, sizeof(image_u8x4_t));
     return im;
 }
 
 image_u8x4_t *image_u8x4_copy(const image_u8x4_t *in)
 {
-    uint8_t *buf = malloc(in->height*in->stride*sizeof(uint8_t));
+    uint8_t *buf = apriltag_malloc(in->height*in->stride*sizeof(uint8_t));
     memcpy(buf, in->buf, in->height*in->stride*sizeof(uint8_t));
 
     // const initializer
     image_u8x4_t tmp = { .width = in->width, .height = in->height, .stride = in->stride, .buf = buf };
 
-    image_u8x4_t *copy = calloc(1, sizeof(image_u8x4_t));
+    image_u8x4_t *copy = apriltag_calloc(1, sizeof(image_u8x4_t));
     memcpy(copy, &tmp, sizeof(image_u8x4_t));
     return copy;
 }
@@ -78,8 +79,8 @@ void image_u8x4_destroy(image_u8x4_t *im)
     if (!im)
         return;
 
-    free(im->buf);
-    free(im);
+    apriltag_free(im->buf);
+    apriltag_free(im);
 }
 
 ////////////////////////////////////////////////////////////
@@ -109,7 +110,7 @@ image_u8x4_t *image_u8x4_create_from_pam(const char *inpath)
         } else if (pam->depth == 4) {
             memcpy(&im->buf[y*im->stride], &pam->data[4*pam->width*y], 4*pam->width);
         } else {
-            assert(0); // not implemented
+            apriltag_assert(0); // not implemented
         }
     }
 

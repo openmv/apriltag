@@ -31,6 +31,7 @@ either expressed or implied, of the Regents of The University of Michigan.
 #include <string.h>
 #include <math.h>
 
+#include "common/config.h"
 #include "common/image_u8.h"
 #include "common/pnm.h"
 #include "common/math_util.h"
@@ -41,12 +42,12 @@ either expressed or implied, of the Regents of The University of Michigan.
 
 image_u8_t *image_u8_create_stride(unsigned int width, unsigned int height, unsigned int stride)
 {
-    uint8_t *buf = calloc(height*stride, sizeof(uint8_t));
+    uint8_t *buf = apriltag_calloc(height*stride, sizeof(uint8_t));
 
     // const initializer
     image_u8_t tmp = { .width = width, .height = height, .stride = stride, .buf = buf };
 
-    image_u8_t *im = calloc(1, sizeof(image_u8_t));
+    image_u8_t *im = apriltag_calloc(1, sizeof(image_u8_t));
     memcpy(im, &tmp, sizeof(image_u8_t));
     return im;
 }
@@ -68,13 +69,13 @@ image_u8_t *image_u8_create_alignment(unsigned int width, unsigned int height, u
 
 image_u8_t *image_u8_copy(const image_u8_t *in)
 {
-    uint8_t *buf = malloc(in->height*in->stride*sizeof(uint8_t));
+    uint8_t *buf = apriltag_malloc(in->height*in->stride*sizeof(uint8_t));
     memcpy(buf, in->buf, in->height*in->stride*sizeof(uint8_t));
 
     // const initializer
     image_u8_t tmp = { .width = in->width, .height = in->height, .stride = in->stride, .buf = buf };
 
-    image_u8_t *copy = calloc(1, sizeof(image_u8_t));
+    image_u8_t *copy = apriltag_calloc(1, sizeof(image_u8_t));
     memcpy(copy, &tmp, sizeof(image_u8_t));
     return copy;
 }
@@ -84,8 +85,8 @@ void image_u8_destroy(image_u8_t *im)
     if (!im)
         return;
 
-    free(im->buf);
-    free(im);
+    apriltag_free(im->buf);
+    apriltag_free(im);
 }
 
 ////////////////////////////////////////////////////////////
@@ -115,7 +116,7 @@ image_u8_t *image_u8_create_from_pnm_alignment(const char *path, int alignment)
                     for (int x = 0; x < im->width; x++)
                         im->buf[y*im->stride + x] = pnm->buf[2*(y*im->width + x)];
             } else {
-                assert(0);
+                apriltag_assert(0);
             }
 
             break;
@@ -148,7 +149,7 @@ image_u8_t *image_u8_create_from_pnm_alignment(const char *path, int alignment)
                     }
                 }
             } else {
-                assert(0);
+                apriltag_assert(0);
             }
 
             break;
@@ -247,7 +248,7 @@ void image_u8_draw_annulus(image_u8_t *im, float x0, float y0, float r0, float r
     r0 = r0*r0;
     r1 = r1*r1;
 
-    assert(r0 < r1);
+    apriltag_assert(r0 < r1);
 
     for (int y = y0-r1; y <= y0+r1; y++) {
         for (int x = x0-r1; x <= x0+r1; x++) {
@@ -299,7 +300,7 @@ void image_u8_darken(image_u8_t *im)
 
 static void convolve(const uint8_t *x, uint8_t *y, int sz, const uint8_t *k, int ksz)
 {
-    assert((ksz&1)==1);
+    apriltag_assert((ksz&1)==1);
 
     for (int i = 0; i < ksz/2 && i < sz; i++)
         y[i] = x[i];
@@ -319,19 +320,19 @@ static void convolve(const uint8_t *x, uint8_t *y, int sz, const uint8_t *k, int
 
 void image_u8_convolve_2D(image_u8_t *im, const uint8_t *k, int ksz)
 {
-    assert((ksz & 1) == 1); // ksz must be odd.
+    apriltag_assert((ksz & 1) == 1); // ksz must be odd.
 
-    uint8_t *x = malloc(sizeof(uint8_t)*im->stride);
+    uint8_t *x = apriltag_malloc(sizeof(uint8_t)*im->stride);
     for (int y = 0; y < im->height; y++) {
 
         memcpy(x, &im->buf[y*im->stride], im->stride);
 
         convolve(x, &im->buf[y*im->stride], im->width, k, ksz);
     }
-    free(x);
+    apriltag_free(x);
 
-    uint8_t *xb = malloc(sizeof(uint8_t)*im->height);
-    uint8_t *yb = malloc(sizeof(uint8_t)*im->height);
+    uint8_t *xb = apriltag_malloc(sizeof(uint8_t)*im->height);
+    uint8_t *yb = apriltag_malloc(sizeof(uint8_t)*im->height);
     for (int x = 0; x < im->width; x++) {
 
         for (int y = 0; y < im->height; y++)
@@ -342,8 +343,8 @@ void image_u8_convolve_2D(image_u8_t *im, const uint8_t *k, int ksz)
         for (int y = 0; y < im->height; y++)
             im->buf[y*im->stride + x] = yb[y];
     }
-    free(xb);
-    free(yb);
+    apriltag_free(xb);
+    apriltag_free(yb);
 }
 
 void image_u8_gaussian_blur(image_u8_t *im, double sigma, int ksz)
@@ -351,10 +352,10 @@ void image_u8_gaussian_blur(image_u8_t *im, double sigma, int ksz)
     if (sigma == 0)
         return;
 
-    assert((ksz & 1) == 1); // ksz must be odd.
+    apriltag_assert((ksz & 1) == 1); // ksz must be odd.
 
     // build the kernel.
-    double *dk = malloc(sizeof(double)*ksz);
+    double *dk = apriltag_malloc(sizeof(double)*ksz);
 
     // for kernel of length 5:
     // dk[0] = f(-2), dk[1] = f(-1), dk[2] = f(0), dk[3] = f(1), dk[4] = f(2)
@@ -372,7 +373,7 @@ void image_u8_gaussian_blur(image_u8_t *im, double sigma, int ksz)
     for (int i = 0; i < ksz; i++)
         dk[i] /= acc;
 
-    uint8_t *k = malloc(sizeof(uint8_t)*ksz);
+    uint8_t *k = apriltag_malloc(sizeof(uint8_t)*ksz);
     for (int i = 0; i < ksz; i++)
         k[i] = dk[i]*255;
 
@@ -380,10 +381,10 @@ void image_u8_gaussian_blur(image_u8_t *im, double sigma, int ksz)
         for (int i = 0; i < ksz; i++)
             printf("%d %15f %5d\n", i, dk[i], k[i]);
     }
-    free(dk);
+    apriltag_free(dk);
 
     image_u8_convolve_2D(im, k, ksz);
-    free(k);
+    apriltag_free(k);
 }
 
 image_u8_t *image_u8_rotate(const image_u8_t *in, double rad, uint8_t pad)

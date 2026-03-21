@@ -25,6 +25,7 @@ of the authors and should not be interpreted as representing official policies,
 either expressed or implied, of the Regents of The University of Michigan.
 */
 
+#include "common/config.h"
 #include <math.h>
 
 /** SVD 2x2.

@@ -32,6 +32,7 @@ either expressed or implied, of the Regents of The University of Michigan.
 #include <assert.h>
 #include <stdint.h>
 
+#include "common/config.h"
 #include "zmaxheap.h"
 #include "debug_print.h"
 
@@ -73,11 +74,11 @@ static inline void swap_default(zmaxheap_t *heap, int a, int b)
     heap->values[a] = heap->values[b];
     heap->values[b] = t;
 
-    char *tmp = malloc(sizeof(char)*heap->el_sz);
+    char *tmp = apriltag_malloc(sizeof(char)*heap->el_sz);
     memcpy(tmp, &heap->data[a*heap->el_sz], heap->el_sz);
     memcpy(&heap->data[a*heap->el_sz], &heap->data[b*heap->el_sz], heap->el_sz);
     memcpy(&heap->data[b*heap->el_sz], tmp, heap->el_sz);
-    free(tmp);
+    apriltag_free(tmp);
 }
 
 static inline void swap_pointer(zmaxheap_t *heap, int a, int b)
@@ -95,7 +96,7 @@ static inline void swap_pointer(zmaxheap_t *heap, int a, int b)
 
 zmaxheap_t *zmaxheap_create(size_t el_sz)
 {
-    zmaxheap_t *heap = calloc(1, sizeof(zmaxheap_t));
+    zmaxheap_t *heap = apriltag_calloc(1, sizeof(zmaxheap_t));
     heap->el_sz = el_sz;
 
     heap->swap = swap_default;
@@ -108,10 +109,10 @@ zmaxheap_t *zmaxheap_create(size_t el_sz)
 
 void zmaxheap_destroy(zmaxheap_t *heap)
 {
-    free(heap->values);
-    free(heap->data);
+    apriltag_free(heap->values);
+    apriltag_free(heap->data);
     memset(heap, 0, sizeof(zmaxheap_t));
-    free(heap);
+    apriltag_free(heap);
 }
 
 int zmaxheap_size(zmaxheap_t *heap)
@@ -135,8 +136,8 @@ void zmaxheap_ensure_capacity(zmaxheap_t *heap, int capacity)
         newcap *= 2;
     }
 
-    heap->values = realloc(heap->values, newcap * sizeof(float));
-    heap->data = realloc(heap->data, newcap * heap->el_sz);
+    heap->values = apriltag_realloc(heap->values, newcap * sizeof(float));
+    heap->data = apriltag_realloc(heap->data, newcap * heap->el_sz);
     heap->alloc = newcap;
 }
 
@@ -169,9 +170,9 @@ void zmaxheap_add(zmaxheap_t *heap, void *p, float v)
 
 void zmaxheap_vmap(zmaxheap_t *heap, void (*f)(void*))
 {
-    assert(heap != NULL);
-    assert(f != NULL);
-    assert(heap->el_sz == sizeof(void*));
+    apriltag_assert(heap != NULL);
+    apriltag_assert(f != NULL);
+    apriltag_assert(heap->el_sz == sizeof(void*));
 
     for (int idx = 0; idx < heap->size; idx++) {
         void *p = NULL;
@@ -221,7 +222,7 @@ int zmaxheap_remove_index(zmaxheap_t *heap, int idx, void *p, float *v)
         int left = 2*parent + 1;
         int right = left + 1;
 
-//            assert(parent_score == heap->values[parent]);
+//            apriltag_assert(parent_score == heap->values[parent]);
 
         float left_score = (left < heap->size) ? heap->values[left] : -INFINITY;
         float right_score = (right < heap->size) ? heap->values[right] : -INFINITY;
@@ -234,12 +235,12 @@ int zmaxheap_remove_index(zmaxheap_t *heap, int idx, void *p, float *v)
 
         // if we got here, then one of the children is bigger than the parent.
         if (left_score >= right_score) {
-            assert(left < heap->size);
+            apriltag_assert(left < heap->size);
             heap->swap(heap, parent, left);
             parent = left;
         } else {
             // right_score can't be less than left_score if right_score is -INFINITY.
-            assert(right < heap->size);
+            apriltag_assert(right < heap->size);
             heap->swap(heap, parent, right);
             parent = right;
         }
@@ -333,11 +334,11 @@ static void validate(zmaxheap_t *heap)
         int right = 2*parent + 2;
 
         if (left < heap->size) {
-            assert(heap->values[parent] > heap->values[left]);
+            apriltag_assert(heap->values[parent] > heap->values[left]);
         }
 
         if (right < heap->size) {
-            assert(heap->values[parent] > heap->values[right]);
+            apriltag_assert(heap->values[parent] > heap->values[right]);
         }
     }
 }
@@ -361,7 +362,7 @@ void zmaxheap_test()
 {
     int cap = 10000;
     int sz = 0;
-    int32_t *vals = calloc(cap, sizeof(int32_t));
+    int32_t *vals = apriltag_calloc(cap, sizeof(int32_t));
 
     zmaxheap_t *heap = zmaxheap_create(sizeof(int32_t));
 
@@ -369,7 +370,7 @@ void zmaxheap_test()
     int zcnt = 0;
 
     for (int iter = 0; iter < 5000000; iter++) {
-        assert(sz == heap->size);
+        apriltag_assert(sz == heap->size);
 
         if ((random() & 1) == 0 && sz < cap) {
             // add a value
@@ -397,12 +398,12 @@ void zmaxheap_test()
             float outfv = 0;
             int res = zmaxheap_remove_max(heap, &outv, &outfv);
             if (sz == 0) {
-                assert(res == 0);
+                apriltag_assert(res == 0);
                 (void)res;
             } else {
 //                printf("%d %d %d %f\n", sz, maxv, outv, outfv);
-                assert(outv == outfv);
-                assert(maxv == outv);
+                apriltag_assert(outv == outfv);
+                apriltag_assert(maxv == outv);
 
                 // shuffle erase the maximum from our list.
                 vals[maxi] = vals[sz - 1];
@@ -418,5 +419,5 @@ void zmaxheap_test()
     }
 
     printf("max size: %d, zcount %d\n", maxsz, zcnt);
-    free (vals);
+    apriltag_free (vals);
 }

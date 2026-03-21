@@ -27,6 +27,7 @@ either expressed or implied, of the Regents of The University of Michigan.
 
 #include <math.h>
 
+#include "common/config.h"
 #include "common/matd.h"
 #include "common/zarray.h"
 #include "common/homography.h"

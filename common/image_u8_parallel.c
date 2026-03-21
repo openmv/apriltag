@@ -9,13 +9,14 @@
  * 
  */
 
+#include "common/config.h"
 #include "common/image_u8_parallel.h"
 #include "common/workerpool.h"
 #include "common/math_util.h"
 
 static void convolve(const uint8_t *x, uint8_t *y, int sz, const uint8_t *k, int ksz)
 {
-    assert((ksz&1)==1);
+    apriltag_assert((ksz&1)==1);
 
     for (int i = 0; i < ksz/2 && i < sz; i++)
         y[i] = x[i];
@@ -49,14 +50,14 @@ static void _image_u8_convolve_2D_thread_1(void *p) {
     int y_st = params->idx_st;
     int y_ed = params->idx_ed;
 
-    assert((ksz & 1) == 1); // ksz must be odd.
+    apriltag_assert((ksz & 1) == 1); // ksz must be odd.
 
-    uint8_t *x = malloc(sizeof(uint8_t)*im->stride);
+    uint8_t *x = apriltag_malloc(sizeof(uint8_t)*im->stride);
     for (int y = y_st; y < y_ed; y++) {
         memcpy(x, &im->buf[y*im->stride], im->stride);
         convolve(x, &im->buf[y*im->stride], im->width, k, ksz);
     }
-    free(x);
+    apriltag_free(x);
 }
 
 static void _image_u8_convolve_2D_thread_2(void *p) {
@@ -67,8 +68,8 @@ static void _image_u8_convolve_2D_thread_2(void *p) {
     int x_st = params->idx_st;
     int x_ed = params->idx_ed;
 
-    uint8_t *xb = malloc(sizeof(uint8_t)*im->height);
-    uint8_t *yb = malloc(sizeof(uint8_t)*im->height);
+    uint8_t *xb = apriltag_malloc(sizeof(uint8_t)*im->height);
+    uint8_t *yb = apriltag_malloc(sizeof(uint8_t)*im->height);
     for (int x = x_st; x < x_ed; x++) {
 
         for (int y = 0; y < im->height; y++)
@@ -79,8 +80,8 @@ static void _image_u8_convolve_2D_thread_2(void *p) {
         for (int y = 0; y < im->height; y++)
             im->buf[y*im->stride + x] = yb[y];
     }
-    free(xb);
-    free(yb);
+    apriltag_free(xb);
+    apriltag_free(yb);
 }
 
 void image_u8_convolve_2D_parallel(workerpool_t *wp, image_u8_t *im, const uint8_t *k, int ksz) {
@@ -91,7 +92,7 @@ void image_u8_convolve_2D_parallel(workerpool_t *wp, image_u8_t *im, const uint8
     }
     int nthreads = workerpool_get_nthreads(wp);
 
-    struct image_u8_convolve_2D_task *params = malloc(sizeof(struct image_u8_convolve_2D_task) * nthreads);
+    struct image_u8_convolve_2D_task *params = apriltag_malloc(sizeof(struct image_u8_convolve_2D_task) * nthreads);
     int y_inc = im->height / nthreads;
     int y_remainder = im->height % nthreads;
     int last_y = 0;
@@ -126,17 +127,17 @@ void image_u8_convolve_2D_parallel(workerpool_t *wp, image_u8_t *im, const uint8
     }
     workerpool_run(wp);
 
-    free(params);
+    apriltag_free(params);
 }
 
 void image_u8_gaussian_blur_parallel(workerpool_t *wp, image_u8_t *im, double sigma, int ksz) {
     if (sigma == 0)
         return;
 
-    assert((ksz & 1) == 1); // ksz must be odd.
+    apriltag_assert((ksz & 1) == 1); // ksz must be odd.
 
     // build the kernel.
-    double *dk = malloc(sizeof(double)*ksz);
+    double *dk = apriltag_malloc(sizeof(double)*ksz);
 
     // for kernel of length 5:
     // dk[0] = f(-2), dk[1] = f(-1), dk[2] = f(0), dk[3] = f(1), dk[4] = f(2)
@@ -154,12 +155,12 @@ void image_u8_gaussian_blur_parallel(workerpool_t *wp, image_u8_t *im, double si
     for (int i = 0; i < ksz; i++)
         dk[i] /= acc;
 
-    uint8_t *k = malloc(sizeof(uint8_t)*ksz);
+    uint8_t *k = apriltag_malloc(sizeof(uint8_t)*ksz);
     for (int i = 0; i < ksz; i++)
         k[i] = dk[i]*255;
 
-    free(dk);
+    apriltag_free(dk);
 
     image_u8_convolve_2D_parallel(wp, im, k, ksz);
-    free(k);
+    apriltag_free(k);
 }

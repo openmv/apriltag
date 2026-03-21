@@ -27,6 +27,7 @@ either expressed or implied, of the Regents of The University of Michigan.
 
 #include <stdlib.h>
 #include <math.h>
+#include "common/config.h"
 #include "time_util.h"
 
 #ifdef _MSC_VER
@@ -56,13 +57,13 @@ struct timeutil_rest
 
 timeutil_rest_t *timeutil_rest_create()
 {
-    timeutil_rest_t *rest = calloc(1, sizeof(timeutil_rest_t));
+    timeutil_rest_t *rest = apriltag_calloc(1, sizeof(timeutil_rest_t));
     return rest;
 }
 
 void timeutil_rest_destroy(timeutil_rest_t *rest)
 {
-    free(rest);
+    apriltag_free(rest);
 }
 
 int64_t utime_now() // blacklist-ignore

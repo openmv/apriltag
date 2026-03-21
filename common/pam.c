@@ -30,6 +30,7 @@ either expressed or implied, of the Regents of The University of Michigan.
 #include <stdlib.h>
 #include <assert.h>
 
+#include "common/config.h"
 #include "pam.h"
 
 pam_t *pam_create_from_file(const char *inpath)
@@ -40,7 +41,7 @@ pam_t *pam_create_from_file(const char *inpath)
         return NULL;
     }
 
-    pam_t *pam = calloc(1, sizeof(pam_t));
+    pam_t *pam = apriltag_calloc(1, sizeof(pam_t));
     pam->width = -1;
     pam->height = -1;
     pam->depth = -1;
@@ -137,10 +138,10 @@ pam_t *pam_create_from_file(const char *inpath)
         goto fail;
     }
 
-    assert(pam->maxval == 255);
+    apriltag_assert(pam->maxval == 255);
 
     pam->datalen = pam->width * pam->height * pam->depth;
-    pam->data = malloc(pam->datalen);
+    pam->data = apriltag_malloc(pam->datalen);
     if (pam->datalen != fread(pam->data, 1, pam->datalen, infile)) {
         printf("pam.c: couldn't read body\n");
         goto fail;
@@ -150,7 +151,7 @@ pam_t *pam_create_from_file(const char *inpath)
     return pam;
 
   fail:
-    free(pam);
+    apriltag_free(pam);
     fclose(infile);
     return NULL;
 }
@@ -176,7 +177,7 @@ int pam_write_file(pam_t *pam, const char *outpath)
             tupl = "GRAYSCALE";
             break;
         default:
-            assert(0);
+            apriltag_assert(0);
     }
 
     fprintf(f, "P7\nWIDTH %d\nHEIGHT %d\nDEPTH %d\nMAXVAL %d\nTUPLTYPE %s\nENDHDR\n",
@@ -197,13 +198,13 @@ void pam_destroy(pam_t *pam)
     if (!pam)
         return;
 
-    free(pam->data);
-    free(pam);
+    apriltag_free(pam->data);
+    apriltag_free(pam);
 }
 
 pam_t *pam_copy(pam_t *pam)
 {
-    pam_t *copy = calloc(1, sizeof(pam_t));
+    pam_t *copy = apriltag_calloc(1, sizeof(pam_t));
     copy->width = pam->width;
     copy->height = pam->height;
     copy->depth = pam->depth;
@@ -211,7 +212,7 @@ pam_t *pam_copy(pam_t *pam)
     copy->type = pam->type;
 
     copy->datalen = pam->datalen;
-    copy->data = malloc(pam->datalen);
+    copy->data = apriltag_malloc(pam->datalen);
     memcpy(copy->data, pam->data, pam->datalen);
 
     return copy;
@@ -222,23 +223,23 @@ pam_t *pam_convert(pam_t *in, int type)
     if (type == in->type)
         return pam_copy(in);
 
-    assert(type == PAM_RGB_ALPHA); // we don't support a lot yet
-    assert(in->maxval == 255);
+    apriltag_assert(type == PAM_RGB_ALPHA); // we don't support a lot yet
+    apriltag_assert(in->maxval == 255);
 
     int w = in->width;
     int h = in->height;
 
-    pam_t *out = calloc(1, sizeof(pam_t));
+    pam_t *out = apriltag_calloc(1, sizeof(pam_t));
     out->type = type;
     out->width = w;
     out->height = h;
     out->maxval = in->maxval;
     out->depth = 4;
     out->datalen = 4 * w * h;
-    out->data = malloc(out->datalen);
+    out->data = apriltag_malloc(out->datalen);
 
     if (in->type == PAM_RGB) {
-        assert(in->depth == 3);
+        apriltag_assert(in->depth == 3);
         for (int y = 0; y < h; y++) {
             for (int x = 0; x < w; x++) {
                 out->data[y*4*w + 4*x + 0] = in->data[y*3*w + 3*x + 0];
@@ -249,7 +250,7 @@ pam_t *pam_convert(pam_t *in, int type)
         }
     } else {
         printf("pam.c unsupported type %d\n", in->type);
-        assert(0);
+        apriltag_assert(0);
     }
 
     return out;

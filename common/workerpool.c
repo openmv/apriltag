@@ -28,11 +28,13 @@ either expressed or implied, of the Regents of The University of Michigan.
 
 #define _GNU_SOURCE  // Possible fix for 16.04
 #define __USE_GNU
+#include "common/config.h"
 #include "common/pthreads_cross.h"
 #include <assert.h>
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
+
 #ifdef _WIN32
 #include <windows.h>
 #else
@@ -95,15 +97,15 @@ void *worker_thread(void *p)
 
 workerpool_t *workerpool_create(int nthreads)
 {
-    assert(nthreads > 0);
+    apriltag_assert(nthreads > 0);
 
-    workerpool_t *wp = calloc(1, sizeof(workerpool_t));
+    workerpool_t *wp = apriltag_calloc(1, sizeof(workerpool_t));
     wp->nthreads = nthreads;
     wp->tasks = zarray_create(sizeof(struct task));
     wp->start_predicate = false;
 
     if (nthreads > 1) {
-        wp->threads = calloc(wp->nthreads, sizeof(pthread_t));
+        wp->threads = apriltag_calloc(wp->nthreads, sizeof(pthread_t));
 
         pthread_mutex_init(&wp->mutex, NULL);
         pthread_cond_init(&wp->startcond, NULL);
@@ -150,11 +152,11 @@ void workerpool_destroy(workerpool_t *wp)
         pthread_mutex_destroy(&wp->mutex);
         pthread_cond_destroy(&wp->startcond);
         pthread_cond_destroy(&wp->endcond);
-        free(wp->threads);
+        apriltag_free(wp->threads);
     }
 
     zarray_destroy(wp->tasks);
-    free(wp);
+    apriltag_free(wp);
 }
 
 int workerpool_get_nthreads(workerpool_t *wp)

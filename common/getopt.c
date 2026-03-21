@@ -32,6 +32,7 @@ either expressed or implied, of the Regents of The University of Michigan.
 #include <ctype.h>
 #include <errno.h>
 
+#include "common/config.h"
 #include "zhash.h"
 #include "zarray.h"
 #include "getopt.h"
@@ -66,7 +67,7 @@ struct getopt
 
 getopt_t *getopt_create()
 {
-    getopt_t *gopt = (getopt_t*) calloc(1, sizeof(getopt_t));
+    getopt_t *gopt = (getopt_t*) apriltag_calloc(1, sizeof(getopt_t));
 
     gopt->lopts     = zhash_create(sizeof(char*), sizeof(getopt_option_t*), zhash_str_hash, zhash_str_equals);
     gopt->sopts     = zhash_create(sizeof(char*), sizeof(getopt_option_t*), zhash_str_hash, zhash_str_equals);
@@ -78,12 +79,12 @@ getopt_t *getopt_create()
 
 void getopt_option_destroy(getopt_option_t *goo)
 {
-    free(goo->sname);
-    free(goo->lname);
-    free(goo->svalue);
-    free(goo->help);
+    apriltag_free(goo->sname);
+    apriltag_free(goo->lname);
+    apriltag_free(goo->svalue);
+    apriltag_free(goo->help);
     memset(goo, 0, sizeof(getopt_option_t));
-    free(goo);
+    apriltag_free(goo);
 }
 
 void getopt_option_destroy_void(void *goo)
@@ -107,7 +108,7 @@ void getopt_destroy(getopt_t *gopt)
     zhash_destroy(gopt->sopts);
 
     memset(gopt, 0, sizeof(getopt_t));
-    free(gopt);
+    apriltag_free(gopt);
 }
 
 static void getopt_modify_string(char **str, char *newvalue)
@@ -115,7 +116,7 @@ static void getopt_modify_string(char **str, char *newvalue)
     char *old = *str;
     *str = newvalue;
     if (old != NULL)
-        free(old);
+        apriltag_free(old);
 }
 
 static char *get_arg_assignment(char *arg)
@@ -152,7 +153,7 @@ int getopt_parse(getopt_t *gopt, int argc, char *argv[], int showErrors)
     // take the input stream and chop it up into tokens
     for (int i = 1; i < argc; i++) {
 
-        char *arg = strdup(argv[i]);
+        char *arg = apriltag_strdup(argv[i]);
         char *eq  = get_arg_assignment(arg);
 
         // no equal sign? Push the whole thing.
@@ -161,7 +162,7 @@ int getopt_parse(getopt_t *gopt, int argc, char *argv[], int showErrors)
         } else {
             // there was an equal sign. Push the part
             // before and after the equal sign
-            char *val = strdup(&eq[1]);
+            char *val = apriltag_strdup(&eq[1]);
             eq[0] = 0;
             zarray_add(toks, &arg);
 
@@ -171,9 +172,9 @@ int getopt_parse(getopt_t *gopt, int argc, char *argv[], int showErrors)
                 size_t last = strlen(val) - 1;
                 if (val[last]=='\"')
                     val[last] = 0;
-                char *valclean = strdup(&val[1]);
+                char *valclean = apriltag_strdup(&val[1]);
                 zarray_add(toks, &valclean);
-                free(val);
+                apriltag_free(val);
             } else {
                 zarray_add(toks, &val);
             }
@@ -189,7 +190,7 @@ int getopt_parse(getopt_t *gopt, int argc, char *argv[], int showErrors)
 
         // rather than free statement throughout this while loop
         if (tok != NULL)
-            free(tok);
+            apriltag_free(tok);
 
         zarray_get(toks, i, &tok);
 
@@ -223,7 +224,7 @@ int getopt_parse(getopt_t *gopt, int argc, char *argv[], int showErrors)
                         continue;
                     }
                 }
-                getopt_modify_string(&goo->svalue, strdup("true"));
+                getopt_modify_string(&goo->svalue, apriltag_strdup("true"));
                 i++;
                 continue;
             }
@@ -273,7 +274,7 @@ int getopt_parse(getopt_t *gopt, int argc, char *argv[], int showErrors)
                 goo->was_specified = 1;
 
                 if (goo->type == GOO_BOOL_TYPE) {
-                    getopt_modify_string(&goo->svalue, strdup("true"));
+                    getopt_modify_string(&goo->svalue, apriltag_strdup("true"));
                     continue;
                 }
 
@@ -308,7 +309,7 @@ int getopt_parse(getopt_t *gopt, int argc, char *argv[], int showErrors)
         i++;
     }
     if (tok != NULL)
-        free(tok);
+        apriltag_free(tok);
 
     zarray_destroy(toks);
 
@@ -317,9 +318,9 @@ int getopt_parse(getopt_t *gopt, int argc, char *argv[], int showErrors)
 
 void getopt_add_spacer(getopt_t *gopt, const char *s)
 {
-    getopt_option_t *goo = (getopt_option_t*) calloc(1, sizeof(getopt_option_t));
+    getopt_option_t *goo = (getopt_option_t*) apriltag_calloc(1, sizeof(getopt_option_t));
     goo->spacer = 1;
-    goo->help = strdup(s);
+    goo->help = apriltag_strdup(s);
     zarray_add(gopt->options, &goo);
 }
 
@@ -350,12 +351,12 @@ void getopt_add_bool(getopt_t *gopt, char sopt, const char *lname, int def, cons
         exit (EXIT_FAILURE);
     }
 
-    getopt_option_t *goo = (getopt_option_t*) calloc(1, sizeof(getopt_option_t));
-    goo->sname=strdup(sname);
-    goo->lname=strdup(lname);
-    goo->svalue=strdup(def ? "true" : "false");
+    getopt_option_t *goo = (getopt_option_t*) apriltag_calloc(1, sizeof(getopt_option_t));
+    goo->sname=apriltag_strdup(sname);
+    goo->lname=apriltag_strdup(lname);
+    goo->svalue=apriltag_strdup(def ? "true" : "false");
     goo->type=GOO_BOOL_TYPE;
-    goo->help=strdup(help);
+    goo->help=apriltag_strdup(help);
 
     zhash_put(gopt->lopts, &goo->lname, &goo, NULL, NULL);
     zhash_put(gopt->sopts, &goo->sname, &goo, NULL, NULL);
@@ -400,12 +401,12 @@ void getopt_add_string(getopt_t *gopt, char sopt, const char *lname, const char 
         exit (EXIT_FAILURE);
     }
 
-    getopt_option_t *goo = (getopt_option_t*) calloc(1, sizeof(getopt_option_t));
-    goo->sname=strdup(sname);
-    goo->lname=strdup(lname);
-    goo->svalue=strdup(def);
+    getopt_option_t *goo = (getopt_option_t*) apriltag_calloc(1, sizeof(getopt_option_t));
+    goo->sname=apriltag_strdup(sname);
+    goo->lname=apriltag_strdup(lname);
+    goo->svalue=apriltag_strdup(def);
     goo->type=GOO_STRING_TYPE;
-    goo->help=strdup(help);
+    goo->help=apriltag_strdup(help);
 
     zhash_put(gopt->lopts, &goo->lname, &goo, NULL, NULL);
     zhash_put(gopt->sopts, &goo->sname, &goo, NULL, NULL);
@@ -425,7 +426,7 @@ const char *getopt_get_string(getopt_t *gopt, const char *lname)
 int getopt_get_int(getopt_t *getopt, const char *lname)
 {
     const char *v = getopt_get_string(getopt, lname);
-    assert(v != NULL);
+    apriltag_assert(v != NULL);
 
     errno = 0;
     char *endptr = (char *) v;
@@ -493,7 +494,7 @@ void getopt_do_usage(getopt_t * gopt)
 {
     char * usage = getopt_get_usage(gopt);
     printf("%s", usage);
-    free(usage);
+    apriltag_free(usage);
 }
 
 char * getopt_get_usage(getopt_t *gopt)

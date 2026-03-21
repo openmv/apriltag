@@ -5,6 +5,8 @@
 #include <assert.h>
 #include <stdarg.h>  // Added this header file to support variable arguments
 
+#include <common/config.h>
+
 #include "apriltag.h"
 #include "apriltag_pose.h"
 #include "common/matd.h"
@@ -26,7 +28,7 @@ char* format(const char *fmt, ...) {
         return NULL;
     }
 
-    char *buffer = malloc(required + 1);
+    char *buffer = apriltag_malloc(required + 1);
     if (!buffer) {
         return NULL;
     }
@@ -36,7 +38,7 @@ char* format(const char *fmt, ...) {
     va_end(args);
 
     if (result < 0) {
-        free(buffer);
+        apriltag_free(buffer);
         return NULL;
     }
 
@@ -45,7 +47,7 @@ char* format(const char *fmt, ...) {
 
 // Parse expected detection results
 int parse_expected_detection(const char* line, int* id, double corners[4][2]) {
-    char* line_copy = strdup(line);
+    char* line_copy = apriltag_strdup(line);
     if (!line_copy) {
         return 0;
     }
@@ -53,7 +55,7 @@ int parse_expected_detection(const char* line, int* id, double corners[4][2]) {
     // Split ID and corners using comma
     char* token = strtok(line_copy, ",");
     if (!token) {
-        free(line_copy);
+        apriltag_free(line_copy);
         return 0;
     }
 
@@ -63,20 +65,20 @@ int parse_expected_detection(const char* line, int* id, double corners[4][2]) {
     for (int i = 0; i < 4; i++) {
         token = strtok(NULL, " ()");
         if (!token) {
-            free(line_copy);
+            apriltag_free(line_copy);
             return 0;
         }
         corners[i][0] = atof(token);
 
         token = strtok(NULL, " ()");
         if (!token) {
-            free(line_copy);
+            apriltag_free(line_copy);
             return 0;
         }
         corners[i][1] = atof(token);
     }
 
-    free(line_copy);
+    apriltag_free(line_copy);
     return 1;
 }
 

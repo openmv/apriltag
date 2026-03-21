@@ -4,6 +4,8 @@
 #include <common/pjpeg.h>
 #include <math.h>
 
+#include <common/config.h>
+
 #include "getline.h"
 
 
@@ -24,12 +26,12 @@ format(const char* fmt, ...)
         return NULL;
     }
 
-    char* res_fmt = calloc(N+1, sizeof(char));
+    char* res_fmt = apriltag_calloc(N+1, sizeof(char));
     const int n = vsnprintf(res_fmt, N+1, fmt, args2);
     va_end(args2);
 
     if (n != N) {
-        free(res_fmt);
+        apriltag_free(res_fmt);
         return NULL;
     }
 
@@ -76,7 +78,7 @@ main(int argc, char *argv[])
     char* const path_img = format("%s.jpg", argv[1]);
     pjpeg_t *pjpeg = pjpeg_create_from_file(path_img, 0, NULL);
     image_u8_t *im = pjpeg_to_u8_baseline(pjpeg);
-    free(path_img);
+    apriltag_free(path_img);
 
     // load true detection
     char* const path_det_true = format("%s.txt", argv[1]);
@@ -84,7 +86,7 @@ main(int argc, char *argv[])
     if (fp == NULL) {
         return EXIT_FAILURE;
     }
-    free(path_det_true);
+    apriltag_free(path_det_true);
 
     apriltag_detector_t *td = apriltag_detector_create();
     td->quad_decimate = 1;
@@ -116,7 +118,7 @@ main(int argc, char *argv[])
         size_t len = 0;
         const ssize_t nread = apriltag_test_getline(&line, &len, fp);
         if (nread == -1) {
-            free(line);
+            apriltag_free(line);
             return EXIT_FAILURE;
         }
 
@@ -132,7 +134,7 @@ main(int argc, char *argv[])
             &ref.p[2][0], &ref.p[2][1], &ref.p[3][0], &ref.p[3][1]);
 
         (void) nparsed;
-        assert(nparsed == 9);
+        apriltag_assert(nparsed == 9);
 
         // compare detections
         const bool equ = detection_compare_function(det, &ref) == 0;
@@ -142,8 +144,8 @@ main(int argc, char *argv[])
             ok = false;
         }
 
-        free(det_fmt);
-        free(line);
+        apriltag_free(det_fmt);
+        apriltag_free(line);
     }
 
     // check that we compared the expected amount of detections

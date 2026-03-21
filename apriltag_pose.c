@@ -1,6 +1,7 @@
 #include <math.h>
 #include <stdio.h>
 
+#include "common/config.h"
 #include "common/debug_print.h"
 #include "apriltag_pose.h"
 #include "common/homography.h"
@@ -47,13 +48,13 @@ double orthogonal_iteration(matd_t** v, matd_t** p, matd_t** t, matd_t** R, int 
     }
     matd_scale_inplace(p_mean, 1.0/n_points);
 
-    matd_t** p_res = malloc(sizeof(matd_t *)*n_points);
+    matd_t** p_res = apriltag_malloc(sizeof(matd_t *)*n_points);
     for (int i = 0; i < n_points; i++) {
         p_res[i] = matd_op("M-M", p[i], p_mean);
     }
 
     // Compute M1_inv.
-    matd_t** F = malloc(sizeof(matd_t *)*n_points);
+    matd_t** F = apriltag_malloc(sizeof(matd_t *)*n_points);
     matd_t *avg_F = matd_create(3, 3);
     for (int i = 0; i < n_points; i++) {
         F[i] = calculate_F(v[i]);
@@ -82,7 +83,7 @@ double orthogonal_iteration(matd_t** v, matd_t** p, matd_t** t, matd_t** R, int 
         matd_destroy(M2);
 
         // Calculate rotation.
-        matd_t** q = malloc(sizeof(matd_t *)*n_points);
+        matd_t** q = apriltag_malloc(sizeof(matd_t *)*n_points);
         matd_t* q_mean = matd_create(3, 1);
         for (int j = 0; j < n_points; j++) {
             q[j] = matd_op("M*(M*M+M)", F[j], *R, p[j], *t);
@@ -122,7 +123,7 @@ double orthogonal_iteration(matd_t** v, matd_t** p, matd_t** t, matd_t** R, int 
         }
         prev_error = error;
 
-        free(q);
+        apriltag_free(q);
     }
 
     matd_destroy(I3);
@@ -131,8 +132,8 @@ double orthogonal_iteration(matd_t** v, matd_t** p, matd_t** t, matd_t** R, int 
         matd_destroy(p_res[i]);
         matd_destroy(F[i]);
     }
-    free(p_res);
-    free(F);
+    apriltag_free(p_res);
+    apriltag_free(F);
     matd_destroy(p_mean);
     return prev_error;
 }
@@ -170,12 +171,12 @@ void solve_poly_approx(double* p, int degree, double* roots, int* n_roots) {
     }
 
     // Calculate roots of derivative.
-    double *p_der = malloc(sizeof(double)*degree);
+    double *p_der = apriltag_malloc(sizeof(double)*degree);
     for (int i = 0; i < degree; i++) {
         p_der[i] = (i + 1) * p[i+1];
     }
 
-    double *der_roots = malloc(sizeof(double)*(degree - 1));
+    double *der_roots = apriltag_malloc(sizeof(double)*(degree - 1));
     int n_der_roots;
     solve_poly_approx(p_der, degree - 1, der_roots, &n_der_roots);
 
@@ -249,8 +250,8 @@ void solve_poly_approx(double* p, int degree, double* roots, int* n_roots) {
         }
     }
 
-    free(der_roots);
-    free(p_der);
+    apriltag_free(der_roots);
+    apriltag_free(p_der);
 }
 
 /**
@@ -308,9 +309,9 @@ matd_t* fix_pose_ambiguities(matd_t** v, matd_t** p, matd_t* t, matd_t* R, int n
     double t_initial = atan2(sin_beta, cos_beta);
     matd_destroy(R_trans);
 
-    matd_t** v_trans = malloc(sizeof(matd_t *)*n_points);
-    matd_t** p_trans = malloc(sizeof(matd_t *)*n_points);
-    matd_t** F_trans = malloc(sizeof(matd_t *)*n_points);
+    matd_t** v_trans = apriltag_malloc(sizeof(matd_t *)*n_points);
+    matd_t** p_trans = apriltag_malloc(sizeof(matd_t *)*n_points);
+    matd_t** F_trans = apriltag_malloc(sizeof(matd_t *)*n_points);
     matd_t* avg_F_trans = matd_create(3, 3);
     for (int i = 0; i < n_points; i++) {
         p_trans[i] = matd_op("M'*M", R_z, p[i]);
@@ -385,9 +386,9 @@ matd_t* fix_pose_ambiguities(matd_t** v, matd_t** p, matd_t* t, matd_t* R, int n
         matd_destroy(v_trans[i]);
         matd_destroy(F_trans[i]);
     }
-    free(p_trans);
-    free(v_trans);
-    free(F_trans);
+    apriltag_free(p_trans);
+    apriltag_free(v_trans);
+    apriltag_free(F_trans);
     matd_destroy(avg_F_trans);
     matd_destroy(G);
 

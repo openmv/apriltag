@@ -26,6 +26,7 @@ either expressed or implied, of the Regents of The University of Michigan.
 */
 
 #include <stdlib.h>
+#include "common/config.h"
 #include "tagCircle21h7.h"
 
 static uint64_t codedata[38] = {
@@ -70,14 +71,14 @@ static uint64_t codedata[38] = {
 };
 apriltag_family_t *tagCircle21h7_create()
 {
-   apriltag_family_t *tf = calloc(1, sizeof(apriltag_family_t));
-   tf->name = strdup("tagCircle21h7");
+   apriltag_family_t *tf = apriltag_calloc(1, sizeof(apriltag_family_t));
+   tf->name = apriltag_strdup("tagCircle21h7");
    tf->h = 7;
    tf->ncodes = 38;
    tf->codes = codedata;
    tf->nbits = 21;
-   tf->bit_x = calloc(21, sizeof(uint32_t));
-   tf->bit_y = calloc(21, sizeof(uint32_t));
+   tf->bit_x = apriltag_calloc(21, sizeof(uint32_t));
+   tf->bit_y = apriltag_calloc(21, sizeof(uint32_t));
    tf->bit_x[0] = 1;
    tf->bit_y[0] = -2;
    tf->bit_x[1] = 2;
@@ -128,8 +129,8 @@ apriltag_family_t *tagCircle21h7_create()
 
 void tagCircle21h7_destroy(apriltag_family_t *tf)
 {
-   free(tf->bit_x);
-   free(tf->bit_y);
-   free(tf->name);
-   free(tf);
+   apriltag_free(tf->bit_x);
+   apriltag_free(tf->bit_y);
+   apriltag_free(tf->name);
+   apriltag_free(tf);
 }

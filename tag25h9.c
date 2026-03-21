@@ -26,6 +26,7 @@ either expressed or implied, of the Regents of The University of Michigan.
 */
 
 #include <stdlib.h>
+#include "common/config.h"
 #include "tag25h9.h"
 
 static uint64_t codedata[35] = {
@@ -67,14 +68,14 @@ static uint64_t codedata[35] = {
 };
 apriltag_family_t *tag25h9_create()
 {
-   apriltag_family_t *tf = calloc(1, sizeof(apriltag_family_t));
-   tf->name = strdup("tag25h9");
+   apriltag_family_t *tf = apriltag_calloc(1, sizeof(apriltag_family_t));
+   tf->name = apriltag_strdup("tag25h9");
    tf->h = 9;
    tf->ncodes = 35;
    tf->codes = codedata;
    tf->nbits = 25;
-   tf->bit_x = calloc(25, sizeof(uint32_t));
-   tf->bit_y = calloc(25, sizeof(uint32_t));
+   tf->bit_x = apriltag_calloc(25, sizeof(uint32_t));
+   tf->bit_y = apriltag_calloc(25, sizeof(uint32_t));
    tf->bit_x[0] = 1;
    tf->bit_y[0] = 1;
    tf->bit_x[1] = 2;
@@ -133,8 +134,8 @@ apriltag_family_t *tag25h9_create()
 
 void tag25h9_destroy(apriltag_family_t *tf)
 {
-   free(tf->bit_x);
-   free(tf->bit_y);
-   free(tf->name);
-   free(tf);
+   apriltag_free(tf->bit_x);
+   apriltag_free(tf->bit_y);
+   apriltag_free(tf->name);
+   apriltag_free(tf);
 }

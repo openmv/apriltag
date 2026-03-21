@@ -33,6 +33,7 @@ either expressed or implied, of the Regents of The University of Michigan.
 #include <math.h>
 #include <float.h>
 
+#include "common/config.h"
 #include "common/math_util.h"
 #include "common/svd22.h"
 #include "common/matd.h"
@@ -45,26 +46,26 @@ either expressed or implied, of the Regents of The University of Michigan.
 
 matd_t *matd_create(int rows, int cols)
 {
-    assert(rows >= 0);
-    assert(cols >= 0);
+    apriltag_assert(rows >= 0);
+    apriltag_assert(cols >= 0);
 
     if (rows == 0 || cols == 0)
         return matd_create_scalar(0);
 
-    matd_t *m = calloc(1, sizeof(matd_t));
+    matd_t *m = apriltag_calloc(1, sizeof(matd_t));
     m->nrows = rows;
     m->ncols = cols;
-    m->data = calloc(rows * cols, sizeof(double));
+    m->data = apriltag_calloc(rows * cols, sizeof(double));
 
     return m;
 }
 
 matd_t *matd_create_scalar(TYPE v)
 {
-    matd_t *m = calloc(1, sizeof(matd_t));
+    matd_t *m = apriltag_calloc(1, sizeof(matd_t));
     m->nrows = 0;
     m->ncols = 0;
-    m->data = calloc(1, sizeof(double));
+    m->data = apriltag_calloc(1, sizeof(double));
     m->data[0] = v;
 
     return m;
@@ -109,10 +110,10 @@ matd_t *matd_identity(int dim)
 // row and col are zero-based
 TYPE matd_get(const matd_t *m, unsigned int row, unsigned int col)
 {
-    assert(m != NULL);
-    assert(!matd_is_scalar(m));
-    assert(row < m->nrows);
-    assert(col < m->ncols);
+    apriltag_assert(m != NULL);
+    apriltag_assert(!matd_is_scalar(m));
+    apriltag_assert(row < m->nrows);
+    apriltag_assert(col < m->ncols);
 
     return MATD_EL(m, row, col);
 }
@@ -120,38 +121,38 @@ TYPE matd_get(const matd_t *m, unsigned int row, unsigned int col)
 // row and col are zero-based
 void matd_put(matd_t *m, unsigned int row, unsigned int col, TYPE value)
 {
-    assert(m != NULL);
+    apriltag_assert(m != NULL);
 
     if (matd_is_scalar(m)) {
         matd_put_scalar(m, value);
         return;
     }
 
-    assert(row < m->nrows);
-    assert(col < m->ncols);
+    apriltag_assert(row < m->nrows);
+    apriltag_assert(col < m->ncols);
 
     MATD_EL(m, row, col) = value;
 }
 
 TYPE matd_get_scalar(const matd_t *m)
 {
-    assert(m != NULL);
-    assert(matd_is_scalar(m));
+    apriltag_assert(m != NULL);
+    apriltag_assert(matd_is_scalar(m));
 
     return (m->data[0]);
 }
 
 void matd_put_scalar(matd_t *m, TYPE value)
 {
-    assert(m != NULL);
-    assert(matd_is_scalar(m));
+    apriltag_assert(m != NULL);
+    apriltag_assert(matd_is_scalar(m));
 
     m->data[0] = value;
 }
 
 matd_t *matd_copy(const matd_t *m)
 {
-    assert(m != NULL);
+    apriltag_assert(m != NULL);
 
     matd_t *x = matd_create(m->nrows, m->ncols);
     if (matd_is_scalar(m))
@@ -164,10 +165,10 @@ matd_t *matd_copy(const matd_t *m)
 
 matd_t *matd_select(const matd_t * a, unsigned int r0, int r1, unsigned int c0, int c1)
 {
-    assert(a != NULL);
+    apriltag_assert(a != NULL);
 
-    assert(r0 < a->nrows);
-    assert(c0 < a->ncols);
+    apriltag_assert(r0 < a->nrows);
+    apriltag_assert(c0 < a->ncols);
 
     int nrows = r1 - r0 + 1;
     int ncols = c1 - c0 + 1;
@@ -183,8 +184,8 @@ matd_t *matd_select(const matd_t * a, unsigned int r0, int r1, unsigned int c0, 
 
 void matd_print(const matd_t *m, const char *fmt)
 {
-    assert(m != NULL);
-    assert(fmt != NULL);
+    apriltag_assert(m != NULL);
+    apriltag_assert(fmt != NULL);
 
     if (matd_is_scalar(m)) {
         printf(fmt, MATD_EL(m, 0, 0));
@@ -201,8 +202,8 @@ void matd_print(const matd_t *m, const char *fmt)
 
 void matd_print_transpose(const matd_t *m, const char *fmt)
 {
-    assert(m != NULL);
-    assert(fmt != NULL);
+    apriltag_assert(m != NULL);
+    apriltag_assert(fmt != NULL);
 
     if (matd_is_scalar(m)) {
         printf(fmt, MATD_EL(m, 0, 0));
@@ -222,22 +223,22 @@ void matd_destroy(matd_t *m)
     if (!m)
         return;
 
-    assert(m->data != NULL);
-    free(m->data);
-    free(m);
+    apriltag_assert(m->data != NULL);
+    apriltag_free(m->data);
+    apriltag_free(m);
 }
 
 matd_t *matd_multiply(const matd_t *a, const matd_t *b)
 {
-    assert(a != NULL);
-    assert(b != NULL);
+    apriltag_assert(a != NULL);
+    apriltag_assert(b != NULL);
 
     if (matd_is_scalar(a))
         return matd_scale(b, a->data[0]);
     if (matd_is_scalar(b))
         return matd_scale(a, b->data[0]);
 
-    assert(a->ncols == b->nrows);
+    apriltag_assert(a->ncols == b->nrows);
     matd_t *m = matd_create(a->nrows, b->ncols);
 
     for (unsigned int i = 0; i < m->nrows; i++) {
@@ -255,7 +256,7 @@ matd_t *matd_multiply(const matd_t *a, const matd_t *b)
 
 matd_t *matd_scale(const matd_t *a, double s)
 {
-    assert(a != NULL);
+    apriltag_assert(a != NULL);
 
     if (matd_is_scalar(a))
         return matd_create_scalar(a->data[0] * s);
@@ -273,7 +274,7 @@ matd_t *matd_scale(const matd_t *a, double s)
 
 void matd_scale_inplace(matd_t *a, double s)
 {
-    assert(a != NULL);
+    apriltag_assert(a != NULL);
 
     if (matd_is_scalar(a)) {
         a->data[0] *= s;
@@ -289,10 +290,10 @@ void matd_scale_inplace(matd_t *a, double s)
 
 matd_t *matd_add(const matd_t *a, const matd_t *b)
 {
-    assert(a != NULL);
-    assert(b != NULL);
-    assert(a->nrows == b->nrows);
-    assert(a->ncols == b->ncols);
+    apriltag_assert(a != NULL);
+    apriltag_assert(b != NULL);
+    apriltag_assert(a->nrows == b->nrows);
+    apriltag_assert(a->ncols == b->ncols);
 
     if (matd_is_scalar(a))
         return matd_create_scalar(a->data[0] + b->data[0]);
@@ -310,10 +311,10 @@ matd_t *matd_add(const matd_t *a, const matd_t *b)
 
 void matd_add_inplace(matd_t *a, const matd_t *b)
 {
-    assert(a != NULL);
-    assert(b != NULL);
-    assert(a->nrows == b->nrows);
-    assert(a->ncols == b->ncols);
+    apriltag_assert(a != NULL);
+    apriltag_assert(b != NULL);
+    apriltag_assert(a->nrows == b->nrows);
+    apriltag_assert(a->ncols == b->ncols);
 
     if (matd_is_scalar(a)) {
         a->data[0] += b->data[0];
@@ -330,10 +331,10 @@ void matd_add_inplace(matd_t *a, const matd_t *b)
 
 matd_t *matd_subtract(const matd_t *a, const matd_t *b)
 {
-    assert(a != NULL);
-    assert(b != NULL);
-    assert(a->nrows == b->nrows);
-    assert(a->ncols == b->ncols);
+    apriltag_assert(a != NULL);
+    apriltag_assert(b != NULL);
+    apriltag_assert(a->nrows == b->nrows);
+    apriltag_assert(a->ncols == b->ncols);
 
     if (matd_is_scalar(a))
         return matd_create_scalar(a->data[0] - b->data[0]);
@@ -351,10 +352,10 @@ matd_t *matd_subtract(const matd_t *a, const matd_t *b)
 
 void matd_subtract_inplace(matd_t *a, const matd_t *b)
 {
-    assert(a != NULL);
-    assert(b != NULL);
-    assert(a->nrows == b->nrows);
-    assert(a->ncols == b->ncols);
+    apriltag_assert(a != NULL);
+    apriltag_assert(b != NULL);
+    apriltag_assert(a->nrows == b->nrows);
+    apriltag_assert(a->ncols == b->ncols);
 
     if (matd_is_scalar(a)) {
         a->data[0] -= b->data[0];
@@ -371,7 +372,7 @@ void matd_subtract_inplace(matd_t *a, const matd_t *b)
 
 matd_t *matd_transpose(const matd_t *a)
 {
-    assert(a != NULL);
+    apriltag_assert(a != NULL);
 
     if (matd_is_scalar(a))
         return matd_create_scalar(a->data[0]);
@@ -419,13 +420,13 @@ double matd_det_general(const matd_t *a)
 
 double matd_det(const matd_t *a)
 {
-    assert(a != NULL);
-    assert(a->nrows == a->ncols);
+    apriltag_assert(a != NULL);
+    apriltag_assert(a->nrows == a->ncols);
 
     switch(a->nrows) {
         case 0:
             // scalar: invalid
-            assert(a->nrows > 0);
+            apriltag_assert(a->nrows > 0);
             break;
 
         case 1:
@@ -470,7 +471,7 @@ double matd_det(const matd_t *a)
             return matd_det_general(a);
     }
 
-    assert(0);
+    apriltag_assert(0);
     return 0;
 }
 
@@ -481,8 +482,8 @@ matd_t *matd_inverse(const matd_t *x)
 {
     matd_t *m = NULL;
 
-    assert(x != NULL);
-    assert(x->nrows == x->ncols);
+    apriltag_assert(x != NULL);
+    apriltag_assert(x->nrows == x->ncols);
 
     if (matd_is_scalar(x)) {
         if (x->data[0] == 0)
@@ -555,7 +556,7 @@ static inline matd_t *matd_op_gobble_right(const char *expr, int *pos, matd_t *a
         switch (expr[*pos]) {
 
             case '\'': {
-                assert(acc != NULL); // either a syntax error or a math op failed, producing null
+                apriltag_assert(acc != NULL); // either a syntax error or a math op failed, producing null
                 matd_t *res = matd_transpose(acc);
                 garb[*garbpos] = res;
                 (*garbpos)++;
@@ -567,9 +568,9 @@ static inline matd_t *matd_op_gobble_right(const char *expr, int *pos, matd_t *a
 
                 // handle inverse ^-1. No other exponents are allowed.
             case '^': {
-                assert(acc != NULL);
-                assert(expr[*pos+1] == '-');
-                assert(expr[*pos+2] == '1');
+                apriltag_assert(acc != NULL);
+                apriltag_assert(expr[*pos+1] == '-');
+                apriltag_assert(expr[*pos+2] == '1');
 
                 matd_t *res = matd_inverse(acc);
                 garb[*garbpos] = res;
@@ -733,7 +734,7 @@ static matd_t *matd_op_recurse(const char *expr, int *pos, matd_t *acc, matd_t *
                     return acc;
 
                 // don't support unary plus
-                assert(acc != NULL);
+                apriltag_assert(acc != NULL);
                 (*pos)++;
                 matd_t *rhs = matd_op_recurse(expr, pos, NULL, args, argpos, garb, garbpos, 1);
                 rhs = matd_op_gobble_right(expr, pos, rhs, garb, garbpos);
@@ -782,7 +783,7 @@ static matd_t *matd_op_recurse(const char *expr, int *pos, matd_t *acc, matd_t *
 
             default: {
                 debug_print("Unknown character: '%c'\n", expr[*pos]);
-                assert(expr[*pos] != expr[*pos]);
+                apriltag_assert(expr[*pos] != expr[*pos]);
             }
         }
     }
@@ -795,7 +796,7 @@ matd_t *matd_op(const char *expr, ...)
     int nargs = 0;
     int exprlen = 0;
 
-    assert(expr != NULL);
+    apriltag_assert(expr != NULL);
 
     for (const char *p = expr; *p != 0; p++) {
         if (*p == 'M' || *p == 'F')
@@ -803,7 +804,7 @@ matd_t *matd_op(const char *expr, ...)
         exprlen++;
     }
 
-    assert(nargs > 0);
+    apriltag_assert(nargs > 0);
 
     if (!exprlen) // expr = ""
         return NULL;
@@ -811,7 +812,7 @@ matd_t *matd_op(const char *expr, ...)
     va_list ap;
     va_start(ap, expr);
 
-    matd_t **args = malloc(sizeof(matd_t*)*nargs);
+    matd_t **args = apriltag_malloc(sizeof(matd_t*)*nargs);
     for (int i = 0; i < nargs; i++) {
         args[i] = va_arg(ap, matd_t*);
         // XXX: sanity check argument; emit warning/error if args[i]
@@ -826,10 +827,10 @@ matd_t *matd_op(const char *expr, ...)
 
     // can't create more than 2 new result per character
     // one result, and possibly one argument to free
-    matd_t **garb = malloc(sizeof(matd_t*)*2*exprlen);
+    matd_t **garb = apriltag_malloc(sizeof(matd_t*)*2*exprlen);
 
     matd_t *res = matd_op_recurse(expr, &pos, NULL, args, &argpos, garb, &garbpos, 0);
-    free(args);
+    apriltag_free(args);
 
     // 'res' may need to be freed as part of garbage collection (i.e. expr = "F")
     matd_t *res_copy = (res ? matd_copy(res) : NULL);
@@ -837,15 +838,15 @@ matd_t *matd_op(const char *expr, ...)
     for (int i = 0; i < garbpos; i++) {
         matd_destroy(garb[i]);
     }
-    free(garb);
+    apriltag_free(garb);
 
     return res_copy;
 }
 
 double matd_vec_mag(const matd_t *a)
 {
-    assert(a != NULL);
-    assert(matd_is_vector(a));
+    apriltag_assert(a != NULL);
+    apriltag_assert(matd_is_vector(a));
 
     double mag = 0.0;
     int len = a->nrows*a->ncols;
@@ -856,10 +857,10 @@ double matd_vec_mag(const matd_t *a)
 
 double matd_vec_dist(const matd_t *a, const matd_t *b)
 {
-    assert(a != NULL);
-    assert(b != NULL);
-    assert(matd_is_vector(a) && matd_is_vector(b));
-    assert(a->nrows*a->ncols == b->nrows*b->ncols);
+    apriltag_assert(a != NULL);
+    apriltag_assert(b != NULL);
+    apriltag_assert(matd_is_vector(a) && matd_is_vector(b));
+    apriltag_assert(a->nrows*a->ncols == b->nrows*b->ncols);
 
     int lena = a->nrows*a->ncols;
     return matd_vec_dist_n(a, b, lena);
@@ -867,14 +868,14 @@ double matd_vec_dist(const matd_t *a, const matd_t *b)
 
 double matd_vec_dist_n(const matd_t *a, const matd_t *b, int n)
 {
-    assert(a != NULL);
-    assert(b != NULL);
-    assert(matd_is_vector(a) && matd_is_vector(b));
+    apriltag_assert(a != NULL);
+    apriltag_assert(b != NULL);
+    apriltag_assert(matd_is_vector(a) && matd_is_vector(b));
 
     int lena = a->nrows*a->ncols;
     int lenb = b->nrows*b->ncols;
 
-    assert(n <= lena && n <= lenb);
+    apriltag_assert(n <= lena && n <= lenb);
     (void)lena;
     (void)lenb;
 
@@ -905,12 +906,12 @@ static inline int max_idx(const matd_t *A, int row, int maxcol)
 
 double matd_vec_dot_product(const matd_t *a, const matd_t *b)
 {
-    assert(a != NULL);
-    assert(b != NULL);
-    assert(matd_is_vector(a) && matd_is_vector(b));
+    apriltag_assert(a != NULL);
+    apriltag_assert(b != NULL);
+    apriltag_assert(matd_is_vector(a) && matd_is_vector(b));
     int adim = a->ncols*a->nrows;
     int bdim = b->ncols*b->nrows;
-    assert(adim == bdim);
+    apriltag_assert(adim == bdim);
     (void)bdim;
 
     double acc = 0;
@@ -923,11 +924,11 @@ double matd_vec_dot_product(const matd_t *a, const matd_t *b)
 
 matd_t *matd_vec_normalize(const matd_t *a)
 {
-    assert(a != NULL);
-    assert(matd_is_vector(a));
+    apriltag_assert(a != NULL);
+    apriltag_assert(matd_is_vector(a));
 
     double mag = matd_vec_mag(a);
-    assert(mag > 0);
+    apriltag_assert(mag > 0);
 
     matd_t *b = matd_create(a->nrows, a->ncols);
 
@@ -940,9 +941,9 @@ matd_t *matd_vec_normalize(const matd_t *a)
 
 matd_t *matd_crossproduct(const matd_t *a, const matd_t *b)
 { // only defined for vecs (col or row) of length 3
-    assert(a != NULL);
-    assert(b != NULL);
-    assert(matd_is_vector_len(a, 3) && matd_is_vector_len(b, 3));
+    apriltag_assert(a != NULL);
+    apriltag_assert(b != NULL);
+    apriltag_assert(matd_is_vector_len(a, 3) && matd_is_vector_len(b, 3));
 
     matd_t * r = matd_create(a->nrows, a->ncols);
 
@@ -955,8 +956,8 @@ matd_t *matd_crossproduct(const matd_t *a, const matd_t *b)
 
 TYPE matd_err_inf(const matd_t *a, const matd_t *b)
 {
-    assert(a->nrows == b->nrows);
-    assert(a->ncols == b->ncols);
+    apriltag_assert(a->nrows == b->nrows);
+    apriltag_assert(a->ncols == b->ncols);
 
     TYPE maxf = 0;
 
@@ -1027,7 +1028,7 @@ static matd_svd_t matd_svd_tall(matd_t *A, int flags)
             //
             int vlen = A->nrows - hhidx;
 
-            double *v = malloc(sizeof(double)*vlen);
+            double *v = apriltag_malloc(sizeof(double)*vlen);
 
             double mag2 = 0;
             for (int i = 0; i < vlen; i++) {
@@ -1048,7 +1049,7 @@ static matd_svd_t matd_svd_tall(matd_t *A, int flags)
 
             // this case arises with matrices of all zeros, for example.
             if (mag == 0) {
-                free(v);
+                apriltag_free(v);
                 continue;
             }
 
@@ -1082,13 +1083,13 @@ static matd_svd_t matd_svd_tall(matd_t *A, int flags)
                     MATD_EL(B, hhidx+j, i) -= 2*dot*v[j];
             }
 
-            free(v);
+            apriltag_free(v);
         }
 
         if (hhidx+2 < A->ncols) {
             int vlen = A->ncols - hhidx - 1;
 
-            double *v = malloc(sizeof(double)*vlen);
+            double *v = apriltag_malloc(sizeof(double)*vlen);
 
             double mag2 = 0;
             for (int i = 0; i < vlen; i++) {
@@ -1109,7 +1110,7 @@ static matd_svd_t matd_svd_tall(matd_t *A, int flags)
 
             // this case can occur when the vectors are already perpendicular
             if (mag == 0) {
-                free(v);
+                apriltag_free(v);
                 continue;
             }
 
@@ -1140,7 +1141,7 @@ static matd_svd_t matd_svd_tall(matd_t *A, int flags)
                     MATD_EL(B, i, hhidx+1+j) -= 2*dot*v[j];
             }
 
-            free(v);
+            apriltag_free(v);
         }
     }
 
@@ -1148,7 +1149,7 @@ static matd_svd_t matd_svd_tall(matd_t *A, int flags)
     // as a function of rows*cols. maxiters ~= 1.5*nrows*ncols
     // we're a bit conservative below.
     int maxiters = 200 + 2 * A->nrows * A->ncols;
-    assert(maxiters > 0); // reassure clang
+    apriltag_assert(maxiters > 0); // reassure clang
     int iter;
 
     double maxv = 0; // maximum non-zero value being reduced this iteration
@@ -1161,7 +1162,7 @@ static matd_svd_t matd_svd_tall(matd_t *A, int flags)
 
     // for each of the first B->ncols rows, which index has the
     // maximum absolute value? (used by method 1)
-    unsigned int *maxrowidx = malloc(sizeof(int)*B->ncols);
+    unsigned int *maxrowidx = apriltag_malloc(sizeof(int)*B->ncols);
     unsigned int lastmaxi, lastmaxj;
 
     if (find_max_method == 1) {
@@ -1256,7 +1257,7 @@ static matd_svd_t matd_svd_tall(matd_t *A, int flags)
                 }
             }
 
-            assert(maxi >= 0);
+            apriltag_assert(maxi >= 0);
             maxj = maxrowidx[maxi];
 
             // save these for the next iteration.
@@ -1290,7 +1291,7 @@ static matd_svd_t matd_svd_tall(matd_t *A, int flags)
             if (maxv < tol)
                 break;
         } else {
-            assert(0);
+            apriltag_assert(0);
         }
 
 //        printf(">>> %5d %3d, %3d %15g\n", maxi, maxj, iter, maxv);
@@ -1375,7 +1376,7 @@ static matd_svd_t matd_svd_tall(matd_t *A, int flags)
         }
     }
 
-    free(maxrowidx);
+    apriltag_free(maxrowidx);
 
     if (!(flags & MATD_SVD_NO_WARNINGS) && iter == maxiters) {
         debug_print("WARNING: maximum iters (maximum = %d, matrix %d x %d, max=%.15f)\n",
@@ -1386,8 +1387,8 @@ static matd_svd_t matd_svd_tall(matd_t *A, int flags)
 
     // them all positive by flipping the corresponding columns of
     // U/LS.
-    int *idxs = malloc(sizeof(int)*A->ncols);
-    double *vals = malloc(sizeof(double)*A->ncols);
+    int *idxs = apriltag_malloc(sizeof(int)*A->ncols);
+    double *vals = apriltag_malloc(sizeof(double)*A->ncols);
     for (unsigned int i = 0; i < A->ncols; i++) {
         idxs[i] = i;
         vals[i] = MATD_EL(B, i, i);
@@ -1423,8 +1424,8 @@ static matd_svd_t matd_svd_tall(matd_t *A, int flags)
         MATD_EL(LP, idxs[i], i) = vals[i] < 0 ? -1 : 1;
         MATD_EL(RP, idxs[i], i) = 1; //vals[i] < 0 ? -1 : 1;
     }
-    free(idxs);
-    free(vals);
+    apriltag_free(idxs);
+    apriltag_free(vals);
 
     // we've factored:
     // LP*(something)*RP'
@@ -1503,7 +1504,7 @@ matd_svd_t matd_svd_flags(matd_t *A, int flags)
   if (maxerr > 1e-5) {
   printf("bad maxerr: %15f\n", maxerr);
   matd_print(A, "%15f");
-  assert(0);
+  apriltag_assert(0);
   }
 
 */
@@ -1513,14 +1514,14 @@ matd_svd_t matd_svd_flags(matd_t *A, int flags)
 
 matd_plu_t *matd_plu(const matd_t *a)
 {
-    unsigned int *piv = calloc(a->nrows, sizeof(unsigned int));
+    unsigned int *piv = apriltag_calloc(a->nrows, sizeof(unsigned int));
     int pivsign = 1;
     matd_t *lu = matd_copy(a);
 
     // only for square matrices.
-    assert(a->nrows == a->ncols);
+    apriltag_assert(a->nrows == a->ncols);
 
-    matd_plu_t *mlu = calloc(1, sizeof(matd_plu_t));
+    matd_plu_t *mlu = apriltag_calloc(1, sizeof(matd_plu_t));
 
     for (unsigned int i = 0; i < a->nrows; i++)
         piv[i] = i;
@@ -1549,7 +1550,7 @@ matd_plu_t *matd_plu(const matd_t *a)
 
         // swap rows p and j?
         if (p != j) {
-            TYPE *tmp = malloc(sizeof(TYPE)*lu->ncols);
+            TYPE *tmp = apriltag_malloc(sizeof(TYPE)*lu->ncols);
             memcpy(tmp, &MATD_EL(lu, p, 0), sizeof(TYPE) * lu->ncols);
             memcpy(&MATD_EL(lu, p, 0), &MATD_EL(lu, j, 0), sizeof(TYPE) * lu->ncols);
             memcpy(&MATD_EL(lu, j, 0), tmp, sizeof(TYPE) * lu->ncols);
@@ -1557,7 +1558,7 @@ matd_plu_t *matd_plu(const matd_t *a)
             piv[p] = piv[j];
             piv[j] = k;
             pivsign = -pivsign;
-            free(tmp);
+            apriltag_free(tmp);
         }
 
         double LUjj = MATD_EL(lu, j, j);
@@ -1594,9 +1595,9 @@ matd_plu_t *matd_plu(const matd_t *a)
 void matd_plu_destroy(matd_plu_t *mlu)
 {
     matd_destroy(mlu->lu);
-    free(mlu->piv);
+    apriltag_free(mlu->piv);
     memset(mlu, 0, sizeof(matd_plu_t));
-    free(mlu);
+    apriltag_free(mlu);
 }
 
 double matd_plu_det(const matd_plu_t *mlu)
@@ -1786,9 +1787,9 @@ int main(int argc, char *argv[])
         MATD_EL(S,0,0) = s.S[0];
         MATD_EL(S,1,1) = s.S[1];
 
-        assert(s.S[0] >= s.S[1]);
-        assert(s.S[0] >= 0);
-        assert(s.S[1] >= 0);
+        apriltag_assert(s.S[0] >= s.S[1]);
+        apriltag_assert(s.S[0] >= 0);
+        apriltag_assert(s.S[1] >= 0);
         if (s.S[0] == 0) {
 //            printf("*"); fflush(NULL);
 //            printf("%15f %15f %15f %15f\n", MATD_EL(A,0,0), MATD_EL(A,0,1), MATD_EL(A,1,0), MATD_EL(A,1,1));
@@ -1815,7 +1816,7 @@ int main(int argc, char *argv[])
 
         matd_destroy(USV);
 
-        assert(maxerr < 0.00001);
+        apriltag_assert(maxerr < 0.00001);
     }
 }
 
@@ -1824,7 +1825,7 @@ int main(int argc, char *argv[])
 // XXX NGV Cholesky
 /*static double *matd_cholesky_raw(double *A, int n)
   {
-  double *L = (double*)calloc(n * n, sizeof(double));
+  double *L = (double*)apriltag_calloc(n * n, sizeof(double));
 
   for (int i = 0; i < n; i++) {
   for (int j = 0; j < (i+1); j++) {
@@ -1842,10 +1843,10 @@ int main(int argc, char *argv[])
 
   matd_t *matd_cholesky(const matd_t *A)
   {
-  assert(A->nrows == A->ncols);
+  apriltag_assert(A->nrows == A->ncols);
   double *L_data = matd_cholesky_raw(A->data, A->nrows);
   matd_t *L = matd_create_data(A->nrows, A->ncols, L_data);
-  free(L_data);
+  apriltag_free(L_data);
   return L;
   }*/
 
@@ -1853,7 +1854,7 @@ int main(int argc, char *argv[])
 // used in NGV.
 matd_chol_t *matd_chol(matd_t *A)
 {
-    assert(A->nrows == A->ncols);
+    apriltag_assert(A->nrows == A->ncols);
     int N = A->nrows;
 
     // make upper right
@@ -1862,7 +1863,7 @@ matd_chol_t *matd_chol(matd_t *A)
     // don't actually need to clear lower-left... we won't touch it.
 /*    for (int i = 0; i < U->nrows; i++) {
       for (int j = 0; j < i; j++) {
-//            assert(MATD_EL(U, i, j) == MATD_EL(U, j, i));
+//            apriltag_assert(MATD_EL(U, i, j) == MATD_EL(U, j, i));
 MATD_EL(U, i, j) = 0;
 }
 }
@@ -1892,7 +1893,7 @@ MATD_EL(U, i, j) = 0;
         }
     }
 
-    matd_chol_t *chol = calloc(1, sizeof(matd_chol_t));
+    matd_chol_t *chol = apriltag_calloc(1, sizeof(matd_chol_t));
     chol->is_spd = is_spd;
     chol->u = U;
     return chol;
@@ -1901,7 +1902,7 @@ MATD_EL(U, i, j) = 0;
 void matd_chol_destroy(matd_chol_t *chol)
 {
     matd_destroy(chol->u);
-    free(chol);
+    apriltag_free(chol);
 }
 
 // Solve: (U')x = b, U is upper triangular
@@ -2003,7 +2004,7 @@ matd_t *matd_chol_solve(const matd_chol_t *chol, const matd_t *b)
 // inverse via LU... for now, doesn't seem to be.
 matd_t *matd_chol_inverse(matd_t *a)
 {
-    assert(a->nrows == a->ncols);
+    apriltag_assert(a->nrows == a->ncols);
 
     matd_chol_t *chol = matd_chol(a);
 

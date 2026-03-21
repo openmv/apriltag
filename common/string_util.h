@@ -32,6 +32,7 @@ either expressed or implied, of the Regents of The University of Michigan.
 #include <stdbool.h>
 #include <ctype.h>
 
+#include "common/config.h"
 #include "zarray.h"
 
 #ifdef __cplusplus
@@ -445,9 +446,9 @@ bool string_feeder_starts_with(string_feeder_t *sf, const char *str);
 void string_feeder_require(string_feeder_t *sf, const char *str);
 
 /*#ifndef strdup
-    static inline char *strdup(const char *s) {
+    static inline char *apriltag_strdup(const char *s) {
         int len = strlen(s);
-        char *out = malloc(len+1);
+        char *out = apriltag_malloc(len+1);
         memcpy(out, s, len + 1);
         return out;
     }

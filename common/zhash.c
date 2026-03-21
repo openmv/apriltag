@@ -30,6 +30,7 @@ either expressed or implied, of the Regents of The University of Michigan.
 #include <string.h>
 #include <assert.h>
 
+#include "common/config.h"
 #include "zhash.h"
 
 // force a rehash when our capacity is less than this many times the size
@@ -58,8 +59,8 @@ zhash_t *zhash_create_capacity(size_t keysz, size_t valuesz,
                                uint32_t(*hash)(const void *a), int(*equals)(const void *a, const void*b),
                                int capacity)
 {
-    assert(hash != NULL);
-    assert(equals != NULL);
+    apriltag_assert(hash != NULL);
+    apriltag_assert(equals != NULL);
 
     // resize...
     int _nentries = ZHASH_FACTOR_REALLOC * capacity;
@@ -74,7 +75,7 @@ zhash_t *zhash_create_capacity(size_t keysz, size_t valuesz,
             nentries *= 2;
     }
 
-    zhash_t *zh = (zhash_t*) calloc(1, sizeof(zhash_t));
+    zhash_t *zh = (zhash_t*) apriltag_calloc(1, sizeof(zhash_t));
     zh->keysz = keysz;
     zh->valuesz = valuesz;
     zh->hash = hash;
@@ -83,7 +84,7 @@ zhash_t *zhash_create_capacity(size_t keysz, size_t valuesz,
 
     zh->entrysz = 1 + zh->keysz + zh->valuesz;
 
-    zh->entries = calloc(zh->nentries, zh->entrysz);
+    zh->entries = apriltag_calloc(zh->nentries, zh->entrysz);
 
     return zh;
 }
@@ -99,8 +100,8 @@ void zhash_destroy(zhash_t *zh)
     if (zh == NULL)
         return;
 
-    free(zh->entries);
-    free(zh);
+    apriltag_free(zh->entries);
+    apriltag_free(zh);
 }
 
 int zhash_size(const zhash_t *zh)
@@ -184,7 +185,7 @@ int zhash_put(zhash_t *zh, const void *key, const void *value, void *oldkey, voi
                 void *this_key = &zh->entries[idx * zh->entrysz + 1];
                 void *this_value = &zh->entries[idx * zh->entrysz + 1 + zh->keysz];
                 if (zhash_put(newhash, this_key, this_value, NULL, NULL))
-                    assert(0); // shouldn't already be present.
+                    apriltag_assert(0); // shouldn't already be present.
             }
         }
 
@@ -224,14 +225,14 @@ int zhash_remove(zhash_t *zh, const void *key, void *old_key, void *old_value)
 
                 if (zh->entries[entry_idx * zh->entrysz]) {
                     // completely remove this entry
-                    char *tmp = malloc(sizeof(char)*zh->entrysz);
+                    char *tmp = apriltag_malloc(sizeof(char)*zh->entrysz);
                     memcpy(tmp, &zh->entries[entry_idx * zh->entrysz], zh->entrysz);
                     zh->entries[entry_idx * zh->entrysz] = 0;
                     zh->size--;
                     // reinsert it
                     if (zhash_put(zh, &tmp[1], &tmp[1+zh->keysz], NULL, NULL))
-                        assert(0);
-                    free(tmp);
+                        apriltag_assert(0);
+                    apriltag_free(tmp);
                 } else {
                     break;
                 }
@@ -256,7 +257,7 @@ zhash_t *zhash_copy(const zhash_t *zh)
             void *this_key = &zh->entries[entry_idx * zh->entrysz + 1];
             void *this_value = &zh->entries[entry_idx * zh->entrysz + 1 + zh->keysz];
             if (zhash_put(newhash, this_key, this_value, NULL, NULL))
-                assert(0); // shouldn't already be present.
+                apriltag_assert(0); // shouldn't already be present.
         }
     }
 
@@ -326,7 +327,7 @@ int zhash_iterator_next(zhash_iterator_t *zit, void *outkey, void *outvalue)
 
 void zhash_iterator_remove(zhash_iterator_t *zit)
 {
-    assert(zit->zh); // can't call _remove on a iterator with const zhash
+    apriltag_assert(zit->zh); // can't call _remove on a iterator with const zhash
     zhash_t *zh = zit->zh;
 
     zh->entries[zit->last_entry * zh->entrysz] = 0;
@@ -336,15 +337,15 @@ void zhash_iterator_remove(zhash_iterator_t *zit)
     int entry_idx = (zit->last_entry + 1) & (zh->nentries - 1);
     while (zh->entries[entry_idx *zh->entrysz]) {
         // completely remove this entry
-        char *tmp = malloc(sizeof(char)*zh->entrysz);
+        char *tmp = apriltag_malloc(sizeof(char)*zh->entrysz);
         memcpy(tmp, &zh->entries[entry_idx * zh->entrysz], zh->entrysz);
         zh->entries[entry_idx * zh->entrysz] = 0;
         zh->size--;
 
         // reinsert it
         if (zhash_put(zh, &tmp[1], &tmp[1+zh->keysz], NULL, NULL))
-            assert(0);
-        free(tmp);
+            apriltag_assert(0);
+        apriltag_free(tmp);
 
         entry_idx = (entry_idx + 1) & (zh->nentries - 1);
     }
@@ -354,7 +355,7 @@ void zhash_iterator_remove(zhash_iterator_t *zit)
 
 void zhash_map_keys(zhash_t *zh, void (*f)(void*))
 {
-    assert(zh != NULL);
+    apriltag_assert(zh != NULL);
     if (f == NULL)
         return;
 
@@ -370,7 +371,7 @@ void zhash_map_keys(zhash_t *zh, void (*f)(void*))
 
 void zhash_vmap_keys(zhash_t * zh, void (*f)(void*))
 {
-    assert(zh != NULL);
+    apriltag_assert(zh != NULL);
     if (f == NULL)
         return;
 
@@ -387,7 +388,7 @@ void zhash_vmap_keys(zhash_t * zh, void (*f)(void*))
 
 void zhash_map_values(zhash_t * zh, void (*f)(void*))
 {
-    assert(zh != NULL);
+    apriltag_assert(zh != NULL);
     if (f == NULL)
         return;
 
@@ -402,7 +403,7 @@ void zhash_map_values(zhash_t * zh, void (*f)(void*))
 
 void zhash_vmap_values(zhash_t * zh, void (*f)(void*))
 {
-    assert(zh != NULL);
+    apriltag_assert(zh != NULL);
     if (f == NULL)
         return;
 
@@ -418,7 +419,7 @@ void zhash_vmap_values(zhash_t * zh, void (*f)(void*))
 
 zarray_t *zhash_keys(const zhash_t *zh)
 {
-    assert(zh != NULL);
+    apriltag_assert(zh != NULL);
 
     zarray_t *za = zarray_create(zh->keysz);
 
@@ -435,7 +436,7 @@ zarray_t *zhash_keys(const zhash_t *zh)
 
 zarray_t *zhash_values(const zhash_t *zh)
 {
-    assert(zh != NULL);
+    apriltag_assert(zh != NULL);
 
     zarray_t *za = zarray_create(zh->valuesz);
 
@@ -453,7 +454,7 @@ zarray_t *zhash_values(const zhash_t *zh)
 
 uint32_t zhash_uint32_hash(const void *_a)
 {
-    assert(_a != NULL);
+    apriltag_assert(_a != NULL);
 
     uint32_t a = *((uint32_t*) _a);
     return a;
@@ -461,8 +462,8 @@ uint32_t zhash_uint32_hash(const void *_a)
 
 int zhash_uint32_equals(const void *_a, const void *_b)
 {
-    assert(_a != NULL);
-    assert(_b != NULL);
+    apriltag_assert(_a != NULL);
+    apriltag_assert(_b != NULL);
 
     uint32_t a = *((uint32_t*) _a);
     uint32_t b = *((uint32_t*) _b);
@@ -472,7 +473,7 @@ int zhash_uint32_equals(const void *_a, const void *_b)
 
 uint32_t zhash_uint64_hash(const void *_a)
 {
-    assert(_a != NULL);
+    apriltag_assert(_a != NULL);
 
     uint64_t a = *((uint64_t*) _a);
     return (uint32_t) (a ^ (a >> 32));
@@ -480,8 +481,8 @@ uint32_t zhash_uint64_hash(const void *_a)
 
 int zhash_uint64_equals(const void *_a, const void *_b)
 {
-    assert(_a != NULL);
-    assert(_b != NULL);
+    apriltag_assert(_a != NULL);
+    apriltag_assert(_b != NULL);
 
     uint64_t a = *((uint64_t*) _a);
     uint64_t b = *((uint64_t*) _b);
@@ -498,7 +499,7 @@ union uintpointer
 
 uint32_t zhash_ptr_hash(const void *a)
 {
-    assert(a != NULL);
+    apriltag_assert(a != NULL);
 
     union uintpointer ip;
     ip.p = * (void**)a;
@@ -513,8 +514,8 @@ uint32_t zhash_ptr_hash(const void *a)
 
 int zhash_ptr_equals(const void *a, const void *b)
 {
-    assert(a != NULL);
-    assert(b != NULL);
+    apriltag_assert(a != NULL);
+    apriltag_assert(b != NULL);
 
     const void * ptra = * (void**)a;
     const void * ptrb = * (void**)b;
@@ -524,8 +525,8 @@ int zhash_ptr_equals(const void *a, const void *b)
 
 int zhash_str_equals(const void *_a, const void *_b)
 {
-    assert(_a != NULL);
-    assert(_b != NULL);
+    apriltag_assert(_a != NULL);
+    apriltag_assert(_b != NULL);
 
     char *a = * (char**)_a;
     char *b = * (char**)_b;
@@ -535,7 +536,7 @@ int zhash_str_equals(const void *_a, const void *_b)
 
 uint32_t zhash_str_hash(const void *_a)
 {
-    assert(_a != NULL);
+    apriltag_assert(_a != NULL);
 
     char *a = * (char**)_a;
 

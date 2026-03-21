@@ -31,6 +31,7 @@ either expressed or implied, of the Regents of The University of Michigan.
 #include <stdint.h>
 #include <string.h>
 
+#include "common/config.h"
 #include "pjpeg.h"
 
 #include "image_u8.h"
@@ -208,7 +209,7 @@ static inline uint32_t bd_peek_bits(struct bit_decoder *bd, int nbits)
 
 static inline uint32_t bd_consume_bits(struct bit_decoder *bd, int nbits)
 {
-    assert(nbits < 32);
+    apriltag_assert(nbits < 32);
 
     bd_ensure(bd, nbits);
 
@@ -222,7 +223,7 @@ static inline uint32_t bd_consume_bits(struct bit_decoder *bd, int nbits)
 // discard without regard for byte stuffing!
 static inline void bd_discard_bytes(struct bit_decoder *bd, int nbytes)
 {
-    assert(bd->nbits_avail == 0);
+    apriltag_assert(bd->nbits_avail == 0);
     bd->inpos += nbytes;
 }
 
@@ -345,7 +346,7 @@ static int pjpeg_decode_buffer(struct pjpeg_decode_state *pjd)
                     return PJPEG_ERR_SOF;
 
                 pjd->ncomponents = nf;
-                pjd->components = calloc(nf, sizeof(struct pjpeg_component));
+                pjd->components = apriltag_calloc(nf, sizeof(struct pjpeg_component));
 
                 for (int i = 0; i < nf; i++) {
                     // comp. identifier
@@ -450,7 +451,7 @@ static int pjpeg_decode_buffer(struct pjpeg_decode_state *pjd)
                 uint8_t ns = bd_consume_bits(&bd, 8);
 
                 // for each component, what is the index into our pjd->components[] array?
-                uint8_t *comp_idx = calloc(ns, sizeof(uint8_t));
+                uint8_t *comp_idx = apriltag_calloc(ns, sizeof(uint8_t));
 
                 for (int i = 0; i < ns; i++) {
                     // component name
@@ -513,12 +514,12 @@ static int pjpeg_decode_buffer(struct pjpeg_decode_state *pjd)
                     if ((comp->stride % alignment) != 0)
                         comp->stride += alignment - (comp->stride % alignment);
 
-                    comp->data = calloc(comp->height * comp->stride, 1);
+                    comp->data = apriltag_calloc(comp->height * comp->stride, 1);
                 }
 
 
                 // each component has its own DC prediction
-                int32_t *dcpred = calloc(ns, sizeof(int32_t));
+                int32_t *dcpred = apriltag_calloc(ns, sizeof(int32_t));
 
                 pjd->reset_count = 0;
 
@@ -649,8 +650,8 @@ static int pjpeg_decode_buffer(struct pjpeg_decode_state *pjd)
                     }
                 }
 
-                free(dcpred);
-                free(comp_idx);
+                apriltag_free(dcpred);
+                apriltag_free(comp_idx);
 
                 break;
             }
@@ -692,21 +693,21 @@ void pjpeg_destroy(pjpeg_t *pj)
         return;
 
     for (int i = 0; i < pj->ncomponents; i++)
-        free(pj->components[i].data);
-    free(pj->components);
+        apriltag_free(pj->components[i].data);
+    apriltag_free(pj->components);
 
-    free(pj);
+    apriltag_free(pj);
 }
 
 
 // just grab the first component.
 image_u8_t *pjpeg_to_u8_baseline(pjpeg_t *pj)
 {
-    assert(pj->ncomponents > 0);
+    apriltag_assert(pj->ncomponents > 0);
 
     pjpeg_component_t *comp = &pj->components[0];
 
-    assert(comp->width >= pj->width && comp->height >= pj->height);
+    apriltag_assert(comp->width >= pj->width && comp->height >= pj->height);
 
     image_u8_t *im = image_u8_create(pj->width, pj->height);
     for (int y = 0; y < im->height; y++)
@@ -737,7 +738,7 @@ static inline uint8_t clamp_u8(int32_t v)
 // color conversion formulas taken from JFIF spec v 1.02
 image_u8x3_t *pjpeg_to_u8x3_baseline(pjpeg_t *pj)
 {
-    assert(pj->ncomponents == 3);
+    apriltag_assert(pj->ncomponents == 3);
 
     pjpeg_component_t *Y = &pj->components[0];
     pjpeg_component_t *Cb = &pj->components[1];
@@ -831,7 +832,7 @@ pjpeg_t *pjpeg_create_from_file(const char *path, uint32_t flags, int *error)
     fseek(f, 0, SEEK_END);
     long buflen = ftell(f);
 
-    uint8_t *buf = malloc(buflen);
+    uint8_t *buf = apriltag_malloc(buflen);
     fseek(f, 0, SEEK_SET);
     int res = fread(buf, 1, buflen, f);
 
@@ -842,7 +843,7 @@ pjpeg_t *pjpeg_create_from_file(const char *path, uint32_t flags, int *error)
 
     fclose(f);
     if (res != buflen) {
-        free(buf);
+        apriltag_free(buf);
         if (error)
             *error = PJPEG_ERR_FILE;
         return NULL;
@@ -850,7 +851,7 @@ pjpeg_t *pjpeg_create_from_file(const char *path, uint32_t flags, int *error)
 
     pjpeg_t *pj = pjpeg_create_from_buffer(buf, buflen, flags, error);
 
-    free(buf);
+    apriltag_free(buf);
     return pj;
 }
 
@@ -863,7 +864,7 @@ pjpeg_t *pjpeg_create_from_buffer(uint8_t *buf, int buflen, uint32_t flags, int 
         pjd.in = mjpeg_dht;
         pjd.inlen = sizeof(mjpeg_dht);
         int result = pjpeg_decode_buffer(&pjd);
-        assert(result == 0);
+        apriltag_assert(result == 0);
         (void)result;
     }
 
@@ -877,13 +878,13 @@ pjpeg_t *pjpeg_create_from_buffer(uint8_t *buf, int buflen, uint32_t flags, int 
 
     if (result) {
         for (int i = 0; i < pjd.ncomponents; i++)
-            free(pjd.components[i].data);
-        free(pjd.components);
+            apriltag_free(pjd.components[i].data);
+        apriltag_free(pjd.components);
 
         return NULL;
     }
 
-    pjpeg_t *pj = calloc(1, sizeof(pjpeg_t));
+    pjpeg_t *pj = apriltag_calloc(1, sizeof(pjpeg_t));
 
     pj->width = pjd.width;
     pj->height = pjd.height;
