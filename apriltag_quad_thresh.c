@@ -1043,6 +1043,7 @@ static void do_unionfind_line2(unionfind_t *uf, image_u8_t *im, int w, int s, in
             DO_UNIONFIND2(0, -1);
         }
 
+#if APRILTAG_ENABLE_8_CONNECTIVITY
         if (v == 255) {
             if (x == 1 || !(v_m1_0 == v_m1_m1 || v_0_m1 == v_m1_m1) ) {
                 DO_UNIONFIND2(-1, -1);
@@ -1051,6 +1052,7 @@ static void do_unionfind_line2(unionfind_t *uf, image_u8_t *im, int w, int s, in
                 DO_UNIONFIND2(1, -1);
             }
         }
+#endif
     }
 }
 #undef DO_UNIONFIND2
@@ -1661,6 +1663,7 @@ zarray_t* do_gradient_clusters(image_u8_t* threshim, int ts, int y0, int y1, int
             DO_CONN(1, 0);
             DO_CONN(0, 1);
 
+#if APRILTAG_ENABLE_8_CONNECTIVITY
             // do 8 connectivity
             if (!connected_last) {
                 // Checking 1, 1 on the previous x, y, and -1, 1 on the current
@@ -1672,6 +1675,7 @@ zarray_t* do_gradient_clusters(image_u8_t* threshim, int ts, int y0, int y1, int
             connected = false;
             DO_CONN(1, 1);
             connected_last = connected;
+#endif
         }
     }
 #undef DO_CONN
