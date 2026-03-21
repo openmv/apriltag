@@ -37,6 +37,10 @@ either expressed or implied, of the Regents of The University of Michigan.
 #include "common/pnm.h"
 #include "common/math_util.h"
 
+#ifdef APRILTAG_USE_MVE
+#include <arm_mve.h>
+#endif
+
 // least common multiple of 64 (sandy bridge cache line) and 24 (stride
 // needed for RGB in 8-wide vector processing)
 #define DEFAULT_ALIGNMENT_U8 96
@@ -496,6 +500,57 @@ image_u8_t *image_u8_decimate(image_u8_t *im, float ffactor)
     int sheight = 1 + (height - 1)/factor;
     image_u8_t *decim = image_u8_create(swidth, sheight);
     int sy = 0;
+
+#ifdef APRILTAG_USE_MVE
+    if (factor == 2) {
+        // Factor 2: pick every other pixel using deinterleave load
+        for (int y = 0; y < height; y += 2) {
+            uint8_t *src = &im->buf[y * im->stride];
+            uint8_t *dst = &decim->buf[sy * decim->stride];
+            int sx = 0;
+            int x = 0;
+
+            // Process 32 source pixels → 16 output pixels at a time
+            for (; x + 32 <= width; x += 32, sx += 16) {
+                // Deinterleave load: even bytes → val[0], odd bytes → val[1]
+                uint8x16x2_t pair = vld2q_u8(&src[x]);
+                vstrbq_u8(&dst[sx], pair.val[0]);
+            }
+
+            // Scalar tail
+            for (; x < width; x += 2, sx++) {
+                dst[sx] = src[x];
+            }
+            sy++;
+        }
+    } else {
+        // Generic integer factor: gather load with precomputed offsets
+        // Build offset vector: [0, factor, 2*factor, ..., 15*factor]
+        uint8_t off_arr[16];
+        for (int i = 0; i < 16; i++)
+            off_arr[i] = i * factor;
+        uint8x16_t offsets = vldrbq_u8(off_arr);
+
+        for (int y = 0; y < height; y += factor) {
+            uint8_t *src = &im->buf[y * im->stride];
+            uint8_t *dst = &decim->buf[sy * decim->stride];
+            int sx = 0;
+            int x = 0;
+
+            // Gather 16 strided pixels at a time
+            for (; x + 16 * factor <= width; x += 16 * factor, sx += 16) {
+                uint8x16_t v = vldrbq_gather_offset_u8(&src[x], offsets);
+                vstrbq_u8(&dst[sx], v);
+            }
+
+            // Scalar tail
+            for (; x < width; x += factor, sx++) {
+                dst[sx] = src[x];
+            }
+            sy++;
+        }
+    }
+#else
     for (int y = 0; y < height; y += factor) {
         int sx = 0;
         for (int x = 0; x < width; x += factor) {
@@ -504,6 +559,7 @@ image_u8_t *image_u8_decimate(image_u8_t *im, float ffactor)
         }
         sy++;
     }
+#endif
     return decim;
 }
 

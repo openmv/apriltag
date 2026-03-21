@@ -46,6 +46,10 @@ either expressed or implied, of the Regents of The University of Michigan.
 #include "common/postscript_utils.h"
 #include "common/math_util.h"
 
+#ifdef APRILTAG_USE_MVE
+#include <arm_mve.h>
+#endif
+
 #ifdef _WIN32
 static inline long int random(void)
 {
@@ -137,12 +141,24 @@ struct threshold_task {
     uint8_t *im_min;
 };
 
+#ifdef APRILTAG_USE_MVE
+typedef float lfp_float_t;
+#define lfp_fabs   fabsf
+#define lfp_sqrt   sqrtf
+#define lfp_exp    expf
+#else
+typedef double lfp_float_t;
+#define lfp_fabs   fabs
+#define lfp_sqrt   sqrt
+#define lfp_exp    exp
+#endif
+
 struct remove_vertex
 {
     int i;           // which vertex to remove?
     int left, right; // left vertex, right vertex
 
-    double err;
+    lfp_float_t err;
 };
 
 struct segment
@@ -156,9 +172,9 @@ struct segment
 
 struct line_fit_pt
 {
-    double Mx, My;
-    double Mxx, Myy, Mxy;
-    double W; // total weight
+    lfp_float_t Mx, My;
+    lfp_float_t Mxx, Myy, Mxy;
+    lfp_float_t W; // total weight
 };
 
 struct cluster_hash
@@ -174,12 +190,12 @@ struct cluster_hash
 //
 // fit a line to the points [i0, i1] (inclusive). i0, i1 are both [0,
 // sz) if i1 < i0, we treat this as a wrap around.
-void fit_line(struct line_fit_pt *lfps, int sz, int i0, int i1, double *lineparm, double *err, double *mse)
+void fit_line(struct line_fit_pt *lfps, int sz, int i0, int i1, lfp_float_t *lineparm, lfp_float_t *err, lfp_float_t *mse)
 {
     apriltag_assert(i0 != i1);
     apriltag_assert(i0 >= 0 && i1 >= 0 && i0 < sz && i1 < sz);
 
-    double Mx, My, Mxx, Myy, Mxy, W;
+    lfp_float_t Mx, My, Mxx, Myy, Mxy, W;
     int N; // how many points are included in the set?
 
     if (i0 < i1) {
@@ -224,39 +240,28 @@ void fit_line(struct line_fit_pt *lfps, int sz, int i0, int i1, double *lineparm
 
     apriltag_assert(N >= 2);
 
-    double Ex = Mx / W;
-    double Ey = My / W;
-    double Cxx = Mxx / W - Ex*Ex;
-    double Cxy = Mxy / W - Ex*Ey;
-    double Cyy = Myy / W - Ey*Ey;
-
-    //if (1) {
-    //    // on iOS about 5% of total CPU spent in these trig functions.
-    //    // 85 ms per frame on 5S, example.pnm
-    //    //
-    //    // XXX this was using the double-precision atan2. Was there a case where
-    //    // we needed that precision? Seems doubtful.
-    //    double normal_theta = .5 * atan2f(-2*Cxy, (Cyy - Cxx));
-    //    nx_old = cosf(normal_theta);
-    //    ny_old = sinf(normal_theta);
-    //}
+    lfp_float_t Ex = Mx / W;
+    lfp_float_t Ey = My / W;
+    lfp_float_t Cxx = Mxx / W - Ex*Ex;
+    lfp_float_t Cxy = Mxy / W - Ex*Ey;
+    lfp_float_t Cyy = Myy / W - Ey*Ey;
 
     // Instead of using the above cos/sin method, pose it as an eigenvalue problem.
-    double eig_small = 0.5*(Cxx + Cyy - sqrtf((Cxx - Cyy)*(Cxx - Cyy) + 4*Cxy*Cxy));
+    lfp_float_t eig_small = 0.5f*(Cxx + Cyy - lfp_sqrt((Cxx - Cyy)*(Cxx - Cyy) + 4*Cxy*Cxy));
 
     if (lineparm) {
         lineparm[0] = Ex;
         lineparm[1] = Ey;
 
-        double eig = 0.5*(Cxx + Cyy + sqrtf((Cxx - Cyy)*(Cxx - Cyy) + 4*Cxy*Cxy));
-        double nx1 = Cxx - eig;
-        double ny1 = Cxy;
-        double M1 = nx1*nx1 + ny1*ny1;
-        double nx2 = Cxy;
-        double ny2 = Cyy - eig;
-        double M2 = nx2*nx2 + ny2*ny2;
+        lfp_float_t eig = 0.5f*(Cxx + Cyy + lfp_sqrt((Cxx - Cyy)*(Cxx - Cyy) + 4*Cxy*Cxy));
+        lfp_float_t nx1 = Cxx - eig;
+        lfp_float_t ny1 = Cxy;
+        lfp_float_t M1 = nx1*nx1 + ny1*ny1;
+        lfp_float_t nx2 = Cxy;
+        lfp_float_t ny2 = Cyy - eig;
+        lfp_float_t M2 = nx2*nx2 + ny2*ny2;
 
-        double nx, ny, M;
+        lfp_float_t nx, ny, M;
         if (M1 > M2) {
             nx = nx1;
             ny = ny1;
@@ -267,8 +272,8 @@ void fit_line(struct line_fit_pt *lfps, int sz, int i0, int i1, double *lineparm
             M = M2;
         }
 
-        double length = sqrtf(M);
-        if (fabs(length) < 1e-12) {
+        lfp_float_t length = lfp_sqrt(M);
+        if (lfp_fabs(length) < 1e-6f) {
             lineparm[2] = lineparm[3] = 0;
         }
         else {
@@ -300,8 +305,8 @@ float pt_compare_angle(struct pt *a, struct pt *b) {
 
 int err_compare_descending(const void *_a, const void *_b)
 {
-    const double *a =  _a;
-    const double *b =  _b;
+    const lfp_float_t *a =  _a;
+    const lfp_float_t *b =  _b;
 
     return ((*a) < (*b)) ? 1 : -1;
 }
@@ -343,7 +348,7 @@ int quad_segment_maxima(apriltag_detector_t *td, zarray_t *cluster, struct line_
     if (ksz < 2)
         return 0;
 
-    double *errs = apriltag_malloc(sizeof(double)*sz);
+    lfp_float_t *errs = apriltag_malloc(sizeof(lfp_float_t)*sz);
 
     for (int i = 0; i < sz; i++) {
         fit_line(lfps, sz, (i + sz - ksz) % sz, (i + ksz) % sz, NULL, &errs[i], NULL);
@@ -351,12 +356,12 @@ int quad_segment_maxima(apriltag_detector_t *td, zarray_t *cluster, struct line_
 
     // apply a low-pass filter to errs
     if (1) {
-        double *y = apriltag_malloc(sizeof(double)*sz);
+        lfp_float_t *y = apriltag_malloc(sizeof(lfp_float_t)*sz);
 
         // how much filter to apply?
 
         // XXX Tunable
-        double sigma = 1; // was 3
+        lfp_float_t sigma = 1; // was 3
 
         // cutoff = exp(-j*j/(2*sigma*sigma));
         // log(cutoff) = -j*j / (2*sigma*sigma)
@@ -367,8 +372,8 @@ int quad_segment_maxima(apriltag_detector_t *td, zarray_t *cluster, struct line_
         // 'cutoff'.
 
         // XXX Tunable (though not super useful to change)
-        double cutoff = 0.05;
-        int fsz = sqrt(-log(cutoff)*2*sigma*sigma) + 1;
+        lfp_float_t cutoff = 0.05f;
+        int fsz = sqrtf(-logf(cutoff)*2*sigma*sigma) + 1;
         fsz = 2*fsz + 1;
 
         // For default values of cutoff = 0.05, sigma = 3,
@@ -377,11 +382,11 @@ int quad_segment_maxima(apriltag_detector_t *td, zarray_t *cluster, struct line_
 
         for (int i = 0; i < fsz; i++) {
             int j = i - fsz / 2;
-            f[i] = exp(-j*j/(2*sigma*sigma));
+            f[i] = expf(-j*j/(2*sigma*sigma));
         }
 
         for (int iy = 0; iy < sz; iy++) {
-            double acc = 0;
+            lfp_float_t acc = 0;
 
             for (int i = 0; i < fsz; i++) {
                 acc += errs[(iy + i - fsz / 2 + sz) % sz] * f[i];
@@ -389,13 +394,13 @@ int quad_segment_maxima(apriltag_detector_t *td, zarray_t *cluster, struct line_
             y[iy] = acc;
         }
 
-        memcpy(errs, y, sizeof(double)*sz);
+        memcpy(errs, y, sizeof(lfp_float_t)*sz);
         apriltag_free(y);
         apriltag_free(f);
     }
 
     int *maxima = apriltag_malloc(sizeof(int)*sz);
-    double *maxima_errs = apriltag_malloc(sizeof(double)*sz);
+    lfp_float_t *maxima_errs = apriltag_malloc(sizeof(lfp_float_t)*sz);
     int nmaxima = 0;
 
     for (int i = 0; i < sz; i++) {
@@ -418,13 +423,13 @@ int quad_segment_maxima(apriltag_detector_t *td, zarray_t *cluster, struct line_
     int max_nmaxima = td->qtp.max_nmaxima;
 
     if (nmaxima > max_nmaxima) {
-        double *maxima_errs_copy = apriltag_malloc(sizeof(double)*nmaxima);
-        memcpy(maxima_errs_copy, maxima_errs, sizeof(double)*nmaxima);
+        lfp_float_t *maxima_errs_copy = apriltag_malloc(sizeof(lfp_float_t)*nmaxima);
+        memcpy(maxima_errs_copy, maxima_errs, sizeof(lfp_float_t)*nmaxima);
 
         // throw out all but the best handful of maxima. Sorts descending.
-        qsort(maxima_errs_copy, nmaxima, sizeof(double), err_compare_descending);
+        qsort(maxima_errs_copy, nmaxima, sizeof(lfp_float_t), err_compare_descending);
 
-        double maxima_thresh = maxima_errs_copy[max_nmaxima];
+        lfp_float_t maxima_thresh = maxima_errs_copy[max_nmaxima];
         int out = 0;
         for (int in = 0; in < nmaxima; in++) {
             if (maxima_errs[in] <= maxima_thresh)
@@ -437,14 +442,14 @@ int quad_segment_maxima(apriltag_detector_t *td, zarray_t *cluster, struct line_
     apriltag_free(maxima_errs);
 
     int best_indices[4];
-    double best_error = HUGE_VALF;
+    lfp_float_t best_error = HUGE_VALF;
 
-    double err01, err12, err23, err30;
-    double mse01, mse12, mse23, mse30;
-    double params01[4], params12[4];
+    lfp_float_t err01, err12, err23, err30;
+    lfp_float_t mse01, mse12, mse23, mse30;
+    lfp_float_t params01[4], params12[4];
 
     // disallow quads where the angle is less than a critical value.
-    double max_dot = td->qtp.cos_critical_rad; //25*M_PI/180);
+    lfp_float_t max_dot = td->qtp.cos_critical_rad; //25*M_PI/180);
 
     for (int m0 = 0; m0 < nmaxima - 3; m0++) {
         int i0 = maxima[m0];
@@ -464,8 +469,8 @@ int quad_segment_maxima(apriltag_detector_t *td, zarray_t *cluster, struct line_
                 if (mse12 > td->qtp.max_line_fit_mse)
                     continue;
 
-                double dot = params01[2]*params12[2] + params01[3]*params12[3];
-                if (fabs(dot) > max_dot)
+                lfp_float_t dot = params01[2]*params12[2] + params01[3]*params12[3];
+                if (lfp_fabs(dot) > max_dot)
                     continue;
 
                 for (int m3 = m2+1; m3 < nmaxima; m3++) {
@@ -479,7 +484,7 @@ int quad_segment_maxima(apriltag_detector_t *td, zarray_t *cluster, struct line_
                     if (mse30 > td->qtp.max_line_fit_mse)
                         continue;
 
-                    double err = err01 + err12 + err23 + err30;
+                    lfp_float_t err = err01 + err12 + err23 + err30;
                     if (err < best_error) {
                         best_error = err;
                         best_indices[0] = i0;
@@ -622,18 +627,18 @@ int quad_segment_agg(zarray_t *cluster, struct line_fit_pt *lfps, int indices[4]
  */
 struct line_fit_pt* compute_lfps(int sz, zarray_t* cluster, image_u8_t* im) {
     struct line_fit_pt *lfps = apriltag_calloc(sz, sizeof(struct line_fit_pt));
-    double sum_Mx = 0, sum_My = 0, sum_Mxx = 0, sum_Myy = 0, sum_Mxy = 0, sum_W = 0;
+    lfp_float_t sum_Mx = 0, sum_My = 0, sum_Mxx = 0, sum_Myy = 0, sum_Mxy = 0, sum_W = 0;
 
     for (int i = 0; i < sz; i++) {
         struct pt *p;
         zarray_get_volatile(cluster, i, &p);
 
         // we now undo our fixed-point arithmetic.
-        double delta = 0.5; // adjust for pixel center bias
-        double x = p->x * .5 + delta;
-        double y = p->y * .5 + delta;
+        lfp_float_t delta = 0.5f;
+        lfp_float_t x = p->x * 0.5f + delta;
+        lfp_float_t y = p->y * 0.5f + delta;
         int ix = x, iy = y;
-        double W = 1;
+        lfp_float_t W = 1;
 
         if (ix > 0 && ix+1 < im->width && iy > 0 && iy+1 < im->height) {
             int grad_x = im->buf[iy * im->stride + ix + 1] -
@@ -642,18 +647,17 @@ struct line_fit_pt* compute_lfps(int sz, zarray_t* cluster, image_u8_t* im) {
             int grad_y = im->buf[(iy+1) * im->stride + ix] -
                 im->buf[(iy-1) * im->stride + ix];
 
-            // XXX Tunable. How to shape the gradient magnitude?
-            W = sqrt(grad_x*grad_x + grad_y*grad_y) + 1;
+            W = lfp_sqrt(grad_x*grad_x + grad_y*grad_y) + 1;
         }
 
-        double fx = x, fy = y;
+        lfp_float_t fx = x, fy = y;
         sum_Mx  += W * fx;
         sum_My  += W * fy;
         sum_Mxx += W * fx * fx;
         sum_Mxy += W * fx * fy;
         sum_Myy += W * fy * fy;
         sum_W   += W;
-        
+
         // Store cumulative sums
         lfps[i].Mx = sum_Mx;
         lfps[i].My = sum_My;
@@ -877,13 +881,13 @@ int fit_quad(
     }
 
 
-    double lines[4][4];
+    lfp_float_t lines[4][4];
 
     for (int i = 0; i < 4; i++) {
         int i0 = indices[i];
         int i1 = indices[(i+1)&3];
 
-        double mse;
+        lfp_float_t mse;
         fit_line(lfps, sz, i0, i1, lines[i], NULL, &mse);
 
         if (mse > td->qtp.max_line_fit_mse) {
@@ -908,22 +912,22 @@ int fit_quad(
         // We want the unit vector, so we need the perpendiculars. Thus, below
         // we have swapped the x and y components and flipped the y components.
 
-        double A00 =  lines[i][3],  A01 = -lines[(i+1)&3][3];
-        double A10 =  -lines[i][2],  A11 = lines[(i+1)&3][2];
-        double B0 = -lines[i][0] + lines[(i+1)&3][0];
-        double B1 = -lines[i][1] + lines[(i+1)&3][1];
+        lfp_float_t A00 =  lines[i][3],  A01 = -lines[(i+1)&3][3];
+        lfp_float_t A10 =  -lines[i][2],  A11 = lines[(i+1)&3][2];
+        lfp_float_t B0 = -lines[i][0] + lines[(i+1)&3][0];
+        lfp_float_t B1 = -lines[i][1] + lines[(i+1)&3][1];
 
-        double det = A00 * A11 - A10 * A01;
+        lfp_float_t det = A00 * A11 - A10 * A01;
 
         // inverse.
-        if (fabs(det) < 0.001) {
+        if (lfp_fabs(det) < 0.001f) {
             res = 0;
             goto finish;
         }
-        double W00 = A11 / det, W01 = -A01 / det;
+        lfp_float_t W00 = A11 / det, W01 = -A01 / det;
 
         // solve
-        double L0 = W00*B0 + W01*B1;
+        lfp_float_t L0 = W00*B0 + W01*B1;
 
         // compute intersection
         quad->p[i][0] = lines[i][0] + L0*A00;
@@ -934,31 +938,31 @@ int fit_quad(
 
     // reject quads that are too small
     if (1) {
-        double area = 0;
+        lfp_float_t area = 0;
 
         // get area of triangle formed by points 0, 1, 2, 0
-        double length[3], p;
+        lfp_float_t length[3], p;
         for (int i = 0; i < 3; i++) {
             int idxa = i; // 0, 1, 2,
             int idxb = (i+1) % 3; // 1, 2, 0
-            length[i] = sqrt(sq(quad->p[idxb][0] - quad->p[idxa][0]) +
-                             sq(quad->p[idxb][1] - quad->p[idxa][1]));
+            length[i] = lfp_sqrt(sq(quad->p[idxb][0] - quad->p[idxa][0]) +
+                                 sq(quad->p[idxb][1] - quad->p[idxa][1]));
         }
         p = (length[0] + length[1] + length[2]) / 2;
 
-        area += sqrt(p*(p-length[0])*(p-length[1])*(p-length[2]));
+        area += lfp_sqrt(p*(p-length[0])*(p-length[1])*(p-length[2]));
 
         // get area of triangle formed by points 2, 3, 0, 2
         for (int i = 0; i < 3; i++) {
             int idxs[] = { 2, 3, 0, 2 };
             int idxa = idxs[i];
             int idxb = idxs[i+1];
-            length[i] = sqrt(sq(quad->p[idxb][0] - quad->p[idxa][0]) +
-                             sq(quad->p[idxb][1] - quad->p[idxa][1]));
+            length[i] = lfp_sqrt(sq(quad->p[idxb][0] - quad->p[idxa][0]) +
+                                 sq(quad->p[idxb][1] - quad->p[idxa][1]));
         }
         p = (length[0] + length[1] + length[2]) / 2;
 
-        area += sqrt(p*(p-length[0])*(p-length[1])*(p-length[2]));
+        area += lfp_sqrt(p*(p-length[0])*(p-length[1])*(p-length[2]));
 
         if (area < 0.95*tag_width*tag_width) {
             res = 0;
@@ -971,16 +975,16 @@ int fit_quad(
         for (int i = 0; i < 4; i++) {
             int i0 = i, i1 = (i+1)&3, i2 = (i+2)&3;
 
-            double dx1 = quad->p[i1][0] - quad->p[i0][0];
-            double dy1 = quad->p[i1][1] - quad->p[i0][1];
-            double dx2 = quad->p[i2][0] - quad->p[i1][0];
-            double dy2 = quad->p[i2][1] - quad->p[i1][1];
-            double denominator = sqrt((dx1*dx1 + dy1*dy1)*(dx2*dx2 + dy2*dy2));
+            lfp_float_t dx1 = quad->p[i1][0] - quad->p[i0][0];
+            lfp_float_t dy1 = quad->p[i1][1] - quad->p[i0][1];
+            lfp_float_t dx2 = quad->p[i2][0] - quad->p[i1][0];
+            lfp_float_t dy2 = quad->p[i2][1] - quad->p[i1][1];
+            lfp_float_t denominator = lfp_sqrt((dx1*dx1 + dy1*dy1)*(dx2*dx2 + dy2*dy2));
             if (denominator == 0) {
                 res = 0;
                 goto finish;
             }
-            double cos_dtheta = (dx1*dx2 + dy1*dy2) / denominator;
+            lfp_float_t cos_dtheta = (dx1*dx2 + dy1*dy2) / denominator;
 
             if ((cos_dtheta > td->qtp.cos_critical_rad || cos_dtheta < -td->qtp.cos_critical_rad) || dx1*dy2 < dy1*dx2) {
                 res = 0;
@@ -1017,18 +1021,59 @@ static void do_unionfind_line2(unionfind_t *uf, image_u8_t *im, int w, int s, in
 {
     apriltag_assert(y > 0);
 
+    uint8_t *row = &im->buf[y * s];
+    uint8_t *prev_row = &im->buf[(y - 1) * s];
+
+#ifdef APRILTAG_USE_MVE
+    for (int x = 1; x < w - 1; ) {
+        // Bulk skip runs of background pixels (127) 16 at a time
+        if (x + 16 <= w - 1) {
+            uint8x16_t chunk = vldrbq_u8(&row[x]);
+            mve_pred16_t active = vcmpneq_n_u8(chunk, 127);
+            if (active == 0) {
+                x += 16;
+                continue;
+            }
+        }
+
+        uint8_t v = row[x];
+        if (v == 127) { x++; continue; }
+
+        // Load neighbors directly (no sliding window needed)
+        uint8_t v_m1_0  = row[x - 1];
+        uint8_t v_m1_m1 = prev_row[x - 1];
+        uint8_t v_0_m1  = prev_row[x];
+        uint8_t v_1_m1  = prev_row[x + 1];
+
+        DO_UNIONFIND2(-1, 0);
+
+        if (x == 1 || !((v_m1_0 == v_m1_m1) && (v_m1_m1 == v_0_m1))) {
+            DO_UNIONFIND2(0, -1);
+        }
+
+        if (v == 255) {
+            if (x == 1 || !(v_m1_0 == v_m1_m1 || v_0_m1 == v_m1_m1)) {
+                DO_UNIONFIND2(-1, -1);
+            }
+            if (!(v_0_m1 == v_1_m1)) {
+                DO_UNIONFIND2(1, -1);
+            }
+        }
+        x++;
+    }
+#else
     uint8_t v_m1_m1;
-    uint8_t v_0_m1 = im->buf[(y - 1)*s];
-    uint8_t v_1_m1 = im->buf[(y - 1)*s + 1];
+    uint8_t v_0_m1 = prev_row[0];
+    uint8_t v_1_m1 = prev_row[1];
     uint8_t v_m1_0;
-    uint8_t v = im->buf[y*s];
+    uint8_t v = row[0];
 
     for (int x = 1; x < w - 1; x++) {
         v_m1_m1 = v_0_m1;
         v_0_m1 = v_1_m1;
-        v_1_m1 = im->buf[(y - 1)*s + x + 1];
+        v_1_m1 = prev_row[x + 1];
         v_m1_0 = v;
-        v = im->buf[y*s + x];
+        v = row[x];
 
         if (v == 127)
             continue;
@@ -1051,6 +1096,7 @@ static void do_unionfind_line2(unionfind_t *uf, image_u8_t *im, int w, int s, in
             }
         }
     }
+#endif
 }
 #undef DO_UNIONFIND2
 
@@ -1114,6 +1160,64 @@ void do_minmax_task(void *p)
     int tw = task->im->width / tilesz;
     image_u8_t *im = task->im;
 
+#ifdef APRILTAG_USE_MVE
+    // Process 4 tiles (16 pixels wide) at a time using MVE
+    int tx = 0;
+    for (; tx + 4 <= tw; tx += 4) {
+        uint8_t *base = &im->buf[ty * tilesz * s + tx * tilesz];
+        uint8x16_t vmin = vdupq_n_u8(255);
+        uint8x16_t vmax = vdupq_n_u8(0);
+
+        for (int dy = 0; dy < tilesz; dy++) {
+            uint8x16_t row = vldrbq_u8(&base[dy * s]);
+            vmin = vminq_u8(vmin, row);
+            vmax = vmaxq_u8(vmax, row);
+        }
+
+        // Horizontal reduce within each 4-byte group (one tile per group)
+        // Step 1: swap adjacent bytes within u16 lanes, then min/max
+        uint8x16_t r1 = vrev16q_u8(vmin);
+        vmin = vminq_u8(vmin, r1);
+        // Step 2: swap u16 halves within u32 lanes, then min/max
+        uint8x16_t r2 = vreinterpretq_u8_u16(vrev32q_u16(vreinterpretq_u16_u8(vmin)));
+        vmin = vminq_u8(vmin, r2);
+
+        r1 = vrev16q_u8(vmax);
+        vmax = vmaxq_u8(vmax, r1);
+        r2 = vreinterpretq_u8_u16(vrev32q_u16(vreinterpretq_u16_u8(vmax)));
+        vmax = vmaxq_u8(vmax, r2);
+
+        // Byte 0 of each u32 lane holds the tile result
+        uint8_t min_tmp[16], max_tmp[16];
+        vstrbq_u8(min_tmp, vmin);
+        vstrbq_u8(max_tmp, vmax);
+
+        int out = ty * tw + tx;
+        task->im_min[out + 0] = min_tmp[0];
+        task->im_min[out + 1] = min_tmp[4];
+        task->im_min[out + 2] = min_tmp[8];
+        task->im_min[out + 3] = min_tmp[12];
+
+        task->im_max[out + 0] = max_tmp[0];
+        task->im_max[out + 1] = max_tmp[4];
+        task->im_max[out + 2] = max_tmp[8];
+        task->im_max[out + 3] = max_tmp[12];
+    }
+
+    // Scalar tail for remaining tiles
+    for (; tx < tw; tx++) {
+        uint8_t max = 0, min = 255;
+        for (int dy = 0; dy < tilesz; dy++) {
+            for (int dx = 0; dx < tilesz; dx++) {
+                uint8_t v = im->buf[(ty*tilesz+dy)*s + tx*tilesz + dx];
+                if (v < min) min = v;
+                if (v > max) max = v;
+            }
+        }
+        task->im_max[ty*tw+tx] = max;
+        task->im_min[ty*tw+tx] = min;
+    }
+#else
     for (int tx = 0; tx < tw; tx++) {
         uint8_t max = 0, min = 255;
 
@@ -1132,6 +1236,7 @@ void do_minmax_task(void *p)
         task->im_max[ty*tw+tx] = max;
         task->im_min[ty*tw+tx] = min;
     }
+#endif
 }
 
 void do_blur_task(void *p)
@@ -1144,6 +1249,62 @@ void do_blur_task(void *p)
     uint8_t *im_max = task->im_max;
     uint8_t *im_min = task->im_min;
 
+#ifdef APRILTAG_USE_MVE
+    // 3x3 min/max filter using direct offset loads (MVE has no vext)
+    // MVE processes the interior; scalar handles edges
+    #define BLUR_SCALAR(x) do { \
+        uint8_t max = 0, min = 255; \
+        for (int dy = -1; dy <= 1; dy++) { \
+            if (ty+dy < 0 || ty+dy >= th) continue; \
+            for (int dx = -1; dx <= 1; dx++) { \
+                if ((x)+dx < 0 || (x)+dx >= tw) continue; \
+                uint8_t m = im_max[(ty+dy)*tw+(x)+dx]; \
+                if (m > max) max = m; \
+                m = im_min[(ty+dy)*tw+(x)+dx]; \
+                if (m < min) min = m; \
+            } \
+        } \
+        task->im_max_tmp[ty*tw+(x)] = max; \
+        task->im_min_tmp[ty*tw+(x)] = min; \
+    } while (0)
+
+    // tx=0: scalar (left edge)
+    BLUR_SCALAR(0);
+
+    // MVE interior: tx=1 .. tw-2, in chunks of 16
+    int tx = 1;
+    for (; tx + 16 < tw; tx += 16) {
+        uint8x16_t vmin = vdupq_n_u8(255);
+        uint8x16_t vmax = vdupq_n_u8(0);
+
+        for (int dy = -1; dy <= 1; dy++) {
+            if (ty + dy < 0 || ty + dy >= th)
+                continue;
+
+            uint8_t *row_max = &im_max[(ty + dy) * tw];
+            uint8_t *row_min = &im_min[(ty + dy) * tw];
+
+            uint8x16_t rmax_c = vldrbq_u8(&row_max[tx]);
+            uint8x16_t rmax_l = vldrbq_u8(&row_max[tx - 1]);
+            uint8x16_t rmax_r = vldrbq_u8(&row_max[tx + 1]);
+            uint8x16_t rmin_c = vldrbq_u8(&row_min[tx]);
+            uint8x16_t rmin_l = vldrbq_u8(&row_min[tx - 1]);
+            uint8x16_t rmin_r = vldrbq_u8(&row_min[tx + 1]);
+
+            vmax = vmaxq_u8(vmax, vmaxq_u8(rmax_c, vmaxq_u8(rmax_l, rmax_r)));
+            vmin = vminq_u8(vmin, vminq_u8(rmin_c, vminq_u8(rmin_l, rmin_r)));
+        }
+
+        vstrbq_u8(&task->im_max_tmp[ty * tw + tx], vmax);
+        vstrbq_u8(&task->im_min_tmp[ty * tw + tx], vmin);
+    }
+
+    // Scalar tail
+    for (; tx < tw; tx++)
+        BLUR_SCALAR(tx);
+
+    #undef BLUR_SCALAR
+#else
     for (int tx = 0; tx < tw; tx++) {
         uint8_t max = 0, min = 255;
 
@@ -1166,6 +1327,7 @@ void do_blur_task(void *p)
         task->im_max_tmp[ty*tw + tx] = max;
         task->im_min_tmp[ty*tw + tx] = min;
     }
+#endif
 }
 
 void do_threshold_task(void *p)
@@ -1181,6 +1343,76 @@ void do_threshold_task(void *p)
     image_u8_t *threshim = task->threshim;
     int min_white_black_diff = task->td->qtp.min_white_black_diff;
 
+#ifdef APRILTAG_USE_MVE
+    // Process 4 tiles (16 pixels wide) at a time
+    int tx = 0;
+    for (; tx + 4 <= tw; tx += 4) {
+        int out = ty * tw + tx;
+
+        // Build per-pixel threshold vector and low-contrast predicate
+        uint8_t thr_arr[16];
+        mve_pred16_t fill_pred = 0;
+
+        for (int i = 0; i < 4; i++) {
+            int mn = im_min[out + i];
+            int mx = im_max[out + i];
+            uint8_t t = 0;
+            if (mx - mn < min_white_black_diff) {
+                fill_pred |= (0xFu << (i * 4));
+            } else {
+                t = mn + (mx - mn) / 2;
+            }
+            thr_arr[i * 4 + 0] = t;
+            thr_arr[i * 4 + 1] = t;
+            thr_arr[i * 4 + 2] = t;
+            thr_arr[i * 4 + 3] = t;
+        }
+
+        uint8x16_t vthresh = vldrbq_u8(thr_arr);
+        uint8x16_t v127 = vdupq_n_u8(127);
+        uint8x16_t v255 = vdupq_n_u8(255);
+        uint8x16_t v0 = vdupq_n_u8(0);
+
+        for (int dy = 0; dy < tilesz; dy++) {
+            int y = ty * tilesz + dy;
+            uint8_t *src = &im->buf[y * s + tx * tilesz];
+            uint8_t *dst = &threshim->buf[y * s + tx * tilesz];
+
+            uint8x16_t pixels = vldrbq_u8(src);
+            // Threshold: pixels > thresh → 255, else 0
+            mve_pred16_t gt = vcmphiq_u8(pixels, vthresh);
+            uint8x16_t result = vpselq_u8(v255, v0, gt);
+            // Override low-contrast tiles with 127
+            result = vpselq_u8(v127, result, fill_pred);
+
+            vstrbq_u8(dst, result);
+        }
+    }
+
+    // Scalar tail for remaining tiles
+    for (; tx < tw; tx++) {
+        int min = im_min[ty*tw + tx];
+        int max = im_max[ty*tw + tx];
+
+        if (max - min < min_white_black_diff) {
+            for (int dy = 0; dy < tilesz; dy++) {
+                int y = ty*tilesz + dy;
+                for (int dx = 0; dx < tilesz; dx++)
+                    threshim->buf[y*s + tx*tilesz + dx] = 127;
+            }
+            continue;
+        }
+
+        uint8_t thresh = min + (max - min) / 2;
+        for (int dy = 0; dy < tilesz; dy++) {
+            int y = ty*tilesz + dy;
+            for (int dx = 0; dx < tilesz; dx++) {
+                uint8_t v = im->buf[y*s + tx*tilesz + dx];
+                threshim->buf[y*s + tx*tilesz + dx] = (v > thresh) ? 255 : 0;
+            }
+        }
+    }
+#else
     for (int tx = 0; tx < tw; tx++) {
         int min = im_min[ty*tw + tx];
         int max = im_max[ty*tw + tx];
@@ -1219,6 +1451,7 @@ void do_threshold_task(void *p)
             }
         }
     }
+#endif
 }
  
 image_u8_t *threshold(apriltag_detector_t *td, image_u8_t *im)
