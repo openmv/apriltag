@@ -69,7 +69,7 @@ struct apriltag_family
     uint32_t ncodes;
 
     // The codes in the family.
-    uint64_t *codes;
+    const uint64_t *codes;
 
     int width_at_border;
     int total_width;

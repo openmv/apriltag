@@ -29,7 +29,8 @@ either expressed or implied, of the Regents of The University of Michigan.
 #include "common/config.h"
 #include "tagCircle21h7.h"
 
-static uint64_t codedata[38] = {
+#if APRILTAG_ENABLE_TAGCIRCLE21H7
+static const uint64_t codedata[38] = {
    0x0000000000157863UL,
    0x0000000000047e28UL,
    0x00000000001383edUL,
@@ -138,3 +139,5 @@ void tagCircle21h7_destroy(apriltag_family_t *tf)
 #endif
    apriltag_free(tf);
 }
+
+#endif // APRILTAG_ENABLE_TAGCIRCLE21H7

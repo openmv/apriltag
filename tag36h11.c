@@ -29,7 +29,8 @@ either expressed or implied, of the Regents of The University of Michigan.
 #include "common/config.h"
 #include "tag36h11.h"
 
-static uint64_t codedata[587] = {
+#if APRILTAG_ENABLE_TAG36H11
+static const uint64_t codedata[587] = {
    0x0000000d7e00984bUL,
    0x0000000dda664ca7UL,
    0x0000000dc4a1c821UL,
@@ -717,3 +718,5 @@ void tag36h11_destroy(apriltag_family_t *tf)
 #endif
    apriltag_free(tf);
 }
+
+#endif // APRILTAG_ENABLE_TAG36H11
