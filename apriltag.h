@@ -33,12 +33,17 @@ extern "C" {
 
 #include <stdlib.h>
 
+#include "platform.h"
 #include "common/matd.h"
 #include "common/image_u8.h"
 #include "common/zarray.h"
 #include "common/workerpool.h"
-#include "common/timeprofile.h"
+#ifndef APRILTAG_NO_THREADS
 #include "common/pthreads_cross.h"
+#endif
+#ifndef APRILTAG_NO_PROFILE
+#include "common/timeprofile.h"
+#endif
 
 #define APRILTAG_TASKS_PER_THREAD_TARGET 10
 
@@ -169,7 +174,9 @@ struct apriltag_detector
 
     ///////////////////////////////////////////////////////////////
     // Statistics relating to last processed frame
+#ifndef APRILTAG_NO_PROFILE
     timeprofile_t *tp;
+#endif
 
     uint32_t nedges;
     uint32_t nsegments;
@@ -186,8 +193,10 @@ struct apriltag_detector
     // Used to manage multi-threading.
     workerpool_t *wp;
 
+#ifndef APRILTAG_NO_THREADS
     // Used for thread safety.
     pthread_mutex_t mutex;
+#endif
 };
 
 // Represents the detection of a tag. These are returned to the user
