@@ -85,12 +85,11 @@ static void _image_u8_convolve_2D_thread_2(void *p) {
 }
 
 void image_u8_convolve_2D_parallel(workerpool_t *wp, image_u8_t *im, const uint8_t *k, int ksz) {
-    if(im->width * im->height < 65536) {
-        // for small images, directly use single threaded convolution
+    int nthreads = workerpool_get_nthreads(wp);
+    if(nthreads == 1 || im->width * im->height < 65536) {
         image_u8_convolve_2D(im, k, ksz);
         return;
     }
-    int nthreads = workerpool_get_nthreads(wp);
 
     struct image_u8_convolve_2D_task *params = apriltag_malloc(sizeof(struct image_u8_convolve_2D_task) * nthreads);
     int y_inc = im->height / nthreads;
@@ -133,6 +132,13 @@ void image_u8_convolve_2D_parallel(workerpool_t *wp, image_u8_t *im, const uint8
 void image_u8_gaussian_blur_parallel(workerpool_t *wp, image_u8_t *im, double sigma, int ksz) {
     if (sigma == 0)
         return;
+
+    int nthreads = workerpool_get_nthreads(wp);
+
+    if(nthreads == 1 ) {
+        image_u8_gaussian_blur(im, sigma, ksz);
+        return;
+    }
 
     apriltag_assert((ksz & 1) == 1); // ksz must be odd.
 
