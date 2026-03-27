@@ -34,14 +34,26 @@ either expressed or implied, of the Regents of The University of Michigan.
 
 typedef struct unionfind unionfind_t;
 
+#if APRILTAG_ENABLE_32BIT_UNIONFIND
+#define APRILTAG_UNIONFIND_MAXID (0xffffffff)
+#define APRILTAG_UNIONFIND_CLUSTER_SHIFT (32)
+typedef uint32_t unionfind_int_t;
+typedef uint64_t unionfind_cluster_id_t;
+#else
+#define APRILTAG_UNIONFIND_MAXID (0xffff)
+#define APRILTAG_UNIONFIND_CLUSTER_SHIFT (16)
+typedef uint16_t unionfind_int_t;
+typedef uint32_t unionfind_cluster_id_t;
+#endif
+
 // Interleaved parent+size for cache locality: accessing parent[i] and
 // size[i] hits the same cache line instead of arrays ~1MB apart.
 struct unionfind_node
 {
     // Parent node for each. Initialized to 0xffffffff
-    uint32_t parent;
+    unionfind_int_t parent;
     // The size of the tree excluding the root
-    uint32_t size;
+    unionfind_int_t size;
 };
 
 struct unionfind
@@ -56,7 +68,7 @@ static inline unionfind_t *unionfind_create(uint32_t maxid)
     uf->maxid = maxid;
     uf->data = (struct unionfind_node *) apriltag_malloc((maxid+1) * sizeof(struct unionfind_node));
     for (uint32_t i = 0; i <= maxid; i++) {
-        uf->data[i].parent = 0xffffffff;
+        uf->data[i].parent = APRILTAG_UNIONFIND_MAXID;
         uf->data[i].size = 0;
     }
     return uf;
@@ -90,7 +102,7 @@ static inline uint32_t unionfind_get_representative(unionfind_t *uf, uint32_t id
 static inline uint32_t unionfind_get_representative(unionfind_t *uf, uint32_t id)
 {
     // unititialized node, so set to self
-    if (uf->data[id].parent == 0xffffffff) {
+    if (uf->data[id].parent == APRILTAG_UNIONFIND_MAXID) {
         uf->data[id].parent = id;
         return id;
     }
