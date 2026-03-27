@@ -95,4 +95,9 @@ static inline char *apriltag_strdup(const char *s) {
 }
 #endif
 
+// ptsort uses a stack buffer for small arrays to avoid malloc overhead.
+#ifndef APRILTAG_STACK_BUFFER_SIZE
+#define APRILTAG_STACK_BUFFER_SIZE (256)
+#endif
+
 #endif // __APRILTAG_LIB_DEFAULT_CONFIG_H__

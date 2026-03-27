@@ -721,10 +721,9 @@ static inline void ptsort(struct pt *pts, int sz)
 
     // a merge sort with temp storage.
     // Use stack allocation for small arrays to avoid malloc overhead
-    #define STACK_BUFFER_SIZE 256
-    struct pt stack_buffer[STACK_BUFFER_SIZE];
+    struct pt stack_buffer[APRILTAG_STACK_BUFFER_SIZE];
     struct pt *tmp;
-    const bool use_heap = sz > STACK_BUFFER_SIZE;
+    const bool use_heap = sz > APRILTAG_STACK_BUFFER_SIZE;
     if (use_heap) {
         tmp = apriltag_malloc(sizeof(struct pt) * sz);
     } else {
