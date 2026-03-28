@@ -54,13 +54,13 @@ static inline long int random(void)
 }
 #endif
 
-static inline uint32_t u64hash_2(uint64_t x) {
+static inline uint32_t u64hash_2(unionfind_cluster_id_t x) {
     return (2654435761 * x) >> 32;
 }
 
 struct uint64_zarray_entry
 {
-    uint64_t id;
+    unionfind_cluster_id_t id;
     zarray_t *cluster;
 
     struct uint64_zarray_entry *next;
@@ -165,7 +165,7 @@ struct line_fit_pt
 struct cluster_hash
 {
     uint32_t hash;
-    uint64_t id;
+    unionfind_cluster_id_t id;
     zarray_t* data;
 };
 
@@ -721,10 +721,9 @@ static inline void ptsort(struct pt *pts, int sz)
 
     // a merge sort with temp storage.
     // Use stack allocation for small arrays to avoid malloc overhead
-    #define STACK_BUFFER_SIZE 256
-    struct pt stack_buffer[STACK_BUFFER_SIZE];
+    struct pt stack_buffer[APRILTAG_STACK_BUFFER_SIZE];
     struct pt *tmp;
-    const bool use_heap = sz > STACK_BUFFER_SIZE;
+    const bool use_heap = sz > APRILTAG_STACK_BUFFER_SIZE;
     if (use_heap) {
         tmp = apriltag_malloc(sizeof(struct pt) * sz);
     } else {
@@ -1590,7 +1589,7 @@ zarray_t* do_gradient_clusters(image_u8_t* threshim, int ts, int y0, int y1, int
             }
 
             // XXX don't query this until we know we need it?
-            uint64_t rep0 = unionfind_get_representative(uf, y*w + x);
+            unionfind_cluster_id_t rep0 = unionfind_get_representative(uf, y*w + x);
             if (unionfind_get_set_size(uf, rep0) < 25) {
                 connected_last = false;
                 continue;
@@ -1622,13 +1621,13 @@ zarray_t* do_gradient_clusters(image_u8_t* threshim, int ts, int y0, int y1, int
                 uint8_t v1 = threshim->buf[(y + dy)*ts + x + dx];       \
                                                                         \
                 if (v0 + v1 == 255) {                                   \
-                    uint64_t rep1 = unionfind_get_representative(uf, (y + dy)*w + x + dx); \
+                    unionfind_cluster_id_t rep1 = unionfind_get_representative(uf, (y + dy)*w + x + dx); \
                     if (unionfind_get_set_size(uf, rep1) > 24) {        \
-                        uint64_t clusterid;                                 \
+                        unionfind_cluster_id_t clusterid;                   \
                         if (rep0 < rep1)                                    \
-                            clusterid = (rep1 << 32) + rep0;                \
+                            clusterid = (rep1 << APRILTAG_UNIONFIND_CLUSTER_SHIFT) + rep0; \
                         else                                                \
-                            clusterid = (rep0 << 32) + rep1;                \
+                            clusterid = (rep0 << APRILTAG_UNIONFIND_CLUSTER_SHIFT) + rep1; \
                                                                             \
                         /* XXX lousy hash function */                       \
                         uint32_t clustermap_bucket = u64hash_2(clusterid) % nclustermap; \

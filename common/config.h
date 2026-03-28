@@ -34,6 +34,9 @@
 #ifndef APRILTAG_ENABLE_8_CONNECTIVITY
 #define APRILTAG_ENABLE_8_CONNECTIVITY      (1)
 #endif
+#ifndef APRILTAG_ENABLE_32BIT_UNIONFIND
+#define APRILTAG_ENABLE_32BIT_UNIONFIND     (1)
+#endif
 
 // Tag families.
 #ifndef APRILTAG_ENABLE_TAG16H5
@@ -90,6 +93,11 @@ static inline char *apriltag_strdup(const char *s) {
     if (d) memcpy(d, s, len);
     return d;
 }
+#endif
+
+// ptsort uses a stack buffer for small arrays to avoid malloc overhead.
+#ifndef APRILTAG_STACK_BUFFER_SIZE
+#define APRILTAG_STACK_BUFFER_SIZE (256)
 #endif
 
 #endif // __APRILTAG_LIB_DEFAULT_CONFIG_H__
