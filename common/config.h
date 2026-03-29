@@ -95,9 +95,13 @@ static inline char *apriltag_strdup(const char *s) {
 }
 #endif
 
-// ptsort uses a stack buffer for small arrays to avoid malloc overhead.
-#ifndef APRILTAG_STACK_BUFFER_SIZE
-#define APRILTAG_STACK_BUFFER_SIZE (256)
+// Returns the number of stack bytes safely available at the current call depth.
+// ptsort divides this by sizeof(struct pt) to get the maximum number of elements
+// it can allocate on the stack; anything larger goes to the heap.
+#ifndef apriltag_stack_avail
+static inline size_t apriltag_stack_avail(void) {
+    return 4096;
+}
 #endif
 
 #endif // __APRILTAG_LIB_DEFAULT_CONFIG_H__
