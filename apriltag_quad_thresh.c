@@ -1528,6 +1528,8 @@ unionfind_t* connected_components(apriltag_detector_t *td, image_u8_t* threshim,
     if (td->nthreads <= 1) {
         do_unionfind_first_line(uf, threshim, w, ts);
         for (int y = 1; y < h; y++) {
+            if (!(y & 0xF))
+                apriltag_poll_event();
             do_unionfind_line2(uf, threshim, w, ts, y);
         }
     } else {
@@ -1579,6 +1581,8 @@ zarray_t* do_gradient_clusters(image_u8_t* threshim, int ts, int y0, int y1, int
     mem_pools[mem_pool_idx] = apriltag_calloc(mem_chunk_size, sizeof(struct uint64_zarray_entry));
 
     for (int y = y0; y < y1; y++) {
+        if (!(y & 0xF))
+            apriltag_poll_event();
         bool connected_last = false;
         for (int x = 1; x < w-1; x++) {
 
