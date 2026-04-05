@@ -84,8 +84,8 @@
 #include <assert.h>
 #define apriltag_assert(x)      assert(x)
 #endif
-#ifndef apriltag_poll_event
-#define apriltag_poll_event()   ((void) 0)
+#ifndef apriltag_poll_events
+#define apriltag_poll_events()  ((void) 0)
 #endif
 
 // strdup uses malloc internally — default impl uses apriltag_malloc.
