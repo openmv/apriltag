@@ -1075,6 +1075,7 @@ static void do_quad_task(void *p)
     int w = task->w, h = task->h;
 
     for (int cidx = task->cidx0; cidx < task->cidx1; cidx++) {
+        apriltag_poll_events();
 
         zarray_t **cluster;
         zarray_get_volatile(clusters, cidx, &cluster);
