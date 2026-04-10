@@ -947,6 +947,8 @@ static void quad_decode_task(void *_u)
     image_u8_t *im = task->im;
 
     for (int quadidx = task->i0; quadidx < task->i1; quadidx++) {
+        apriltag_poll_events();
+
         struct quad *quad_original;
         zarray_get_volatile(task->quads, quadidx, &quad_original);
 
